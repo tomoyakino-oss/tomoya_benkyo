@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>うちゅうせんパニック</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            background-color: #1e1b4b; /* 宇宙っぽい濃い紫 */
+            color: white;
+            touch-action: none;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        #game-canvas {
+            background-color: #312e81;
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+        .dpad-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.4);
+            border-radius: 16px;
+            width: 60px;
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
+            touch-action: none;
+        }
+        .dpad-btn:active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        /* スクロールバー隠し */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .screen-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(17, 24, 39, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+        }
+        .hidden-screen { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <!-- キャンバス (ゲーム画面) -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- UI レイヤー (ゲーム中) -->
+    <div id="ui-layer" class="hidden-screen absolute top-0 left-0 w-full h-full pointer-events-none">
+        <!-- 自分の役職表示 -->
+        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full font-bold">
+            あなたは: <span id="my-role-text">クルー 👨‍🚀</span>
+        </div>
+
+        <!-- D-Pad (左下) -->
+        <div class="absolute bottom-8 left-8 pointer-events-auto flex flex-col items-center gap-2">
+            <button class="dpad-btn" id="btn-up">🔼</button>
+            <div class="flex gap-2">
+                <button class="dpad-btn" id="btn-left">◀️</button>
+                <div class="w-[60px]"></div> <!-- スペーサー -->
+                <button class="dpad-btn" id="btn-right">▶️</button>
+            </div>
+            <button class="dpad-btn" id="btn-down">🔽</button>
+        </div>
+
+        <!-- アクションボタン (右下) -->
+        <div class="absolute bottom-8 right-8 pointer-events-auto flex flex-col items-end gap-4">
+            <button id="btn-catch" class="hidden bg-red-600 border-4 border-red-800 text-white font-bold py-4 px-6 rounded-full shadow-lg text-xl transform transition active:scale-95">
+                👾 つかまえる
+            </button>
+            <button id="btn-meeting" class="bg-yellow-400 border-4 border-yellow-600 text-black font-bold py-4 px-6 rounded-full shadow-lg text-xl transform transition active:scale-95">
+                🚨 きんきゅうかいぎ
+            </button>
+        </div>
+    </div>
+
+    <!-- 参加画面 (Lobby) -->
+    <div id="join-screen" class="screen-overlay">
+        <div class="bg-indigo-900 p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%]">
+            <h1 class="text-3xl font-bold text-yellow-300 mb-6 flex flex-col items-center">
+                <span class="text-5xl mb-2">🚀</span>
+                うちゅうせんパニック
+            </h1>
+            <p class="text-sm text-white mb-4">好きな合言葉を入れてね。<br>同じ合言葉を入れた人同士で<br>一緒に遊べるよ！</p>
+            <input type="text" id="player-name-input" placeholder="なまえをいれてね" maxlength="8"
+                   class="w-full text-black px-4 py-3 rounded-xl text-xl font-bold mb-4 text-center focus:outline-none focus:ring-4 focus:ring-yellow-400">
+            
+            <input type="text" id="room-password-input" placeholder="合言葉（パスワード）" maxlength="15"
+                   class="w-full text-black px-4 py-3 rounded-xl text-xl font-bold mb-4 text-center focus:outline-none focus:ring-4 focus:ring-yellow-400">
+
+            <div class="mb-6 flex justify-center gap-2" id="color-picker">
+                <!-- 色ボタンはJSで生成 -->
+            </div>
+
+            <button id="btn-join" class="w-full bg-green-500 hover:bg-green-400 border-b-4 border-green-700 text-white font-bold py-3 px-6 rounded-xl text-xl transition-all">
+                ゲームにはいる
+            </button>
+        </div>
+    </div>
+
+    <!-- 待機画面 (Lobby Wait) -->
+    <div id="wait-screen" class="screen-overlay hidden-screen">
+        <div class="bg-indigo-900 p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%] flex flex-col h-[70vh]">
+            <h2 class="text-2xl font-bold text-white mb-4">ロビー</h2>
+            <div class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4">
+                <ul id="lobby-player-list" class="space-y-2 text-lg">
+                    <!-- プレイヤーリスト -->
+                </ul>
+            </div>
+            <p class="text-yellow-300 mb-4 font-bold" id="lobby-status">みんなをまっています...</p>
+            <button id="btn-start" class="w-full bg-blue-500 hover:bg-blue-400 border-b-4 border-blue-700 text-white font-bold py-3 px-6 rounded-xl text-xl transition-all">
+                ゲームスタート！
+            </button>
+        </div>
+    </div>
+
+    <!-- 役職発表画面 -->
+    <div id="role-screen" class="screen-overlay hidden-screen justify-center items-center">
+        <div class="text-center animate-bounce">
+            <h2 id="role-title" class="text-5xl font-bold mb-4"></h2>
+            <p id="role-desc" class="text-xl"></p>
+        </div>
+    </div>
+
+    <!-- 会議・チャット画面 -->
+    <div id="meeting-screen" class="screen-overlay hidden-screen">
+        <div class="bg-indigo-900 p-4 rounded-3xl border-4 border-yellow-500 shadow-2xl max-w-md w-[95%] h-[80vh] flex flex-col">
+            <h2 class="text-2xl font-bold text-center text-yellow-400 mb-2 flex items-center justify-center gap-2">
+                🚨 きんきゅうかいぎ 🚨
+            </h2>
+            <p class="text-center text-sm mb-4">エイリアンはだれだ！？はなしあおう！</p>
+            
+            <div id="chat-messages" class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4 flex flex-col gap-2">
+                <!-- チャットメッセージ -->
+            </div>
+
+            <div class="flex gap-2 mb-4 shrink-0">
+                <input type="text" id="chat-input" placeholder="メッセージ..." maxlength="30"
+                       class="flex-grow text-black px-4 py-2 rounded-xl text-lg focus:outline-none">
+                <button id="btn-send-chat" class="bg-green-500 text-white font-bold py-2 px-4 rounded-xl">
+                    そうしん
+                </button>
+            </div>
+
+            <button id="btn-end-meeting" class="w-full bg-red-500 hover:bg-red-400 border-b-4 border-red-700 text-white font-bold py-3 px-6 rounded-xl text-lg transition-all shrink-0">
+                かいぎをおわる
+            </button>
+        </div>
+    </div>
+
+    <!-- メッセージ表示用モーダル -->
+    <div id="alert-modal" class="screen-overlay hidden-screen z-[100]">
+        <div class="bg-gray-800 p-6 rounded-2xl border-2 border-gray-600 text-center max-w-xs">
+            <p id="alert-text" class="text-lg font-bold mb-4"></p>
+            <button id="btn-alert-ok" class="bg-blue-500 text-white font-bold py-2 px-6 rounded-xl">OK</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'spaceship-panic';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
+        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+
+        let auth, db, userId, currentRoomId;
+        
+        // --- ゲーム状態 ---
+        let me = { name: '', color: '#ef4444', x: 500, y: 500, isAlive: true, role: 'crew' };
+        let players = {}; // 他のプレイヤーを含む全プレイヤー情報
+        let globalState = { status: 'lobby', alienId: null, meetingCaller: null };
+        
+        // --- 操作・描画関連 ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        const MAP_SIZE = 2000;
+        let dx = 0, dy = 0;
+        const speed = 5;
+        let lastSyncTime = 0;
+        let animationFrameId;
+
+        // --- カラーパレット ---
+        const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#ec4899', '#a855f7', '#f97316', '#ffffff'];
+        const colorPicker = document.getElementById('color-picker');
+        colors.forEach(color => {
+            const btn = document.createElement('button');
+            btn.className = `w-8 h-8 rounded-full border-2 ${color === me.color ? 'border-white' : 'border-transparent'}`;
+            btn.style.backgroundColor = color;
+            btn.onclick = () => {
+                me.color = color;
+                Array.from(colorPicker.children).forEach(c => c.classList.remove('border-white'));
+                btn.classList.add('border-white');
+            };
+            colorPicker.appendChild(btn);
+        });
+
+        // --- ユーティリティ ---
+        function showAlert(msg) {
+            document.getElementById('alert-text').innerText = msg;
+            document.getElementById('alert-modal').classList.remove('hidden-screen');
+        }
+        document.getElementById('btn-alert-ok').onclick = () => {
+            document.getElementById('alert-modal').classList.add('hidden-screen');
+        };
+        
+        function switchScreen(screenId) {
+            ['join-screen', 'wait-screen', 'role-screen', 'meeting-screen', 'ui-layer'].forEach(id => {
+                document.getElementById(id).classList.add('hidden-screen');
+            });
+            if(screenId) document.getElementById(screenId).classList.remove('hidden-screen');
+        }
+
+        // --- Firebase 初期化 ---
+        async function initGame() {
+            if (!firebaseConfig) {
+                showAlert('エラー: データベース設定がありません。');
+                return;
+            }
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (initialToken) {
+                    await signInWithCustomToken(auth, initialToken);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                userId = auth.currentUser.uid;
+                
+                // ボタンの有効化
+                document.getElementById('btn-join').onclick = joinGame;
+                document.getElementById('btn-start').onclick = startGame;
+                document.getElementById('btn-meeting').onclick = callMeeting;
+                document.getElementById('btn-end-meeting').onclick = endMeeting;
+                document.getElementById('btn-send-chat').onclick = sendChat;
+                document.getElementById('btn-catch').onclick = catchCrew;
+                setupDPad();
+
+                // キャンバスリサイズ
+                window.addEventListener('resize', resizeCanvas);
+                resizeCanvas();
+
+                // 描画ループ開始
+                requestAnimationFrame(gameLoop);
+
+            } catch (error) {
+                console.error(error);
+                showAlert('せつぞくにシッパイしました。');
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+
+        // --- 画面遷移ロジック ---
+        async function joinGame() {
+            const nameInput = document.getElementById('player-name-input').value.trim();
+            const passwordInput = document.getElementById('room-password-input').value.trim();
+
+            if (!nameInput) {
+                showAlert('なまえをいれてね！');
+                return;
+            }
+            if (!passwordInput) {
+                showAlert('合言葉（パスワード）をいれてね！');
+                return;
+            }
+
+            currentRoomId = passwordInput;
+            me.name = nameInput;
+            me.x = Math.random() * (MAP_SIZE - 200) + 100;
+            me.y = Math.random() * (MAP_SIZE - 200) + 100;
+
+            switchScreen('wait-screen');
+
+            // プレイヤーデータの保存 (RULE 1遵守)
+            const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
+            await setDoc(playerRef, {
+                name: me.name,
+                color: me.color,
+                x: me.x,
+                y: me.y,
+                isAlive: true,
+                role: 'crew', // 初期値
+                lastActive: Date.now()
+            });
+
+            startListening();
+        }
+
+        function startListening() {
+            // グローバル状態の監視 (RULE 1, 2)
+            const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
+            onSnapshot(globalRef, (docSnap) => {
+                if (docSnap.exists()) {
+                    const newState = docSnap.data();
+                    handleStateChange(globalState.status, newState.status, newState);
+                    globalState = newState;
+                }
+            }, (error) => console.error("Snapshot error:", error));
+
+            // プレイヤー一覧の監視 (RULE 1, 2)
+            const playersCol = collection(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`);
+            onSnapshot(playersCol, (snapshot) => {
+                const newPlayers = {};
+                snapshot.forEach(doc => {
+                    newPlayers[doc.id] = doc.data();
+                });
+                players = newPlayers;
+                updateLobbyList();
+                
+                // 自分の状態を同期
+                if (players[userId]) {
+                    me.isAlive = players[userId].isAlive;
+                    me.role = players[userId].role;
+                    
+                    // キャッチボタンの表示制御
+                    if (globalState.status === 'playing') {
+                        document.getElementById('btn-catch').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                    }
+                }
+            }, (error) => console.error("Snapshot error:", error));
+
+            // チャットの監視
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
+            onSnapshot(chatCol, (snapshot) => {
+                const chatBox = document.getElementById('chat-messages');
+                chatBox.innerHTML = '';
+                // JS側でソート (RULE 2: クエリでのorderByを避ける)
+                const msgs = [];
+                snapshot.forEach(doc => msgs.push(doc.data()));
+                msgs.sort((a, b) => a.timestamp - b.timestamp);
+                
+                msgs.forEach(msg => {
+                    const div = document.createElement('div');
+                    div.className = `p-2 rounded-lg text-black ${msg.senderId === userId ? 'bg-green-200 self-end' : 'bg-gray-100 self-start'} max-w-[80%]`;
+                    div.innerHTML = `<span class="font-bold text-xs text-gray-500 block">${msg.senderName}</span>${msg.text}`;
+                    chatBox.appendChild(div);
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            }, (error) => console.error("Snapshot error:", error));
+        }
+
+        function updateLobbyList() {
+            if (globalState.status !== 'lobby') return;
+            const list = document.getElementById('lobby-player-list');
+            list.innerHTML = '';
+            Object.values(players).forEach(p => {
+                const li = document.createElement('li');
+                li.className = "flex items-center gap-2";
+                li.innerHTML = `<span class="w-4 h-4 rounded-full inline-block" style="background-color: ${p.color}"></span> ${p.name}`;
+                list.appendChild(li);
+            });
+        }
+
+        async function startGame() {
+            const playerIds = Object.keys(players);
+            if (playerIds.length < 2) {
+                showAlert('2人いじょうであそんでね！');
+                return;
+            }
+
+            // ランダムにエイリアンを選ぶ
+            const alienId = playerIds[Math.floor(Math.random() * playerIds.length)];
+
+            // 全員の役職をリセット＆設定
+            for (let pid of playerIds) {
+                const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, pid);
+                await updateDoc(pRef, { 
+                    role: pid === alienId ? 'alien' : 'crew',
+                    isAlive: true,
+                    x: Math.random() * (MAP_SIZE - 200) + 100, // 初期位置もランダムに
+                    y: Math.random() * (MAP_SIZE - 200) + 100
+                });
+            }
+
+            // 古いチャットをクリア (簡易的にドキュメント取得して削除)
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
+            const chatDocs = await getDocs(chatCol);
+            chatDocs.forEach(d => deleteDoc(d.ref));
+
+            // グローバル状態をplayingに
+            const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
+            await setDoc(globalRef, { status: 'playing', alienId: alienId, meetingCaller: null });
+        }
+
+        function handleStateChange(oldStatus, newStatus, stateData) {
+            if (oldStatus === newStatus) return;
+
+            if (newStatus === 'playing') {
+                // 役職発表画面
+                switchScreen('role-screen');
+                const title = document.getElementById('role-title');
+                const desc = document.getElementById('role-desc');
+                
+                // Firestoreからの同期が完了するのを少し待つ
+                setTimeout(() => {
+                    if (me.role === 'alien') {
+                        title.innerText = "あなたは エイリアン 👾";
+                        title.className = "text-5xl font-bold mb-4 text-red-500";
+                        desc.innerText = "クルーにバレずにつかまえろ！";
+                    } else {
+                        title.innerText = "あなたは クルー 👨‍🚀";
+                        title.className = "text-5xl font-bold mb-4 text-blue-400";
+                        desc.innerText = "エイリアンからにげろ！";
+                    }
+                    document.getElementById('my-role-text').innerText = me.role === 'alien' ? 'エイリアン 👾' : 'クルー 👨‍🚀';
+                    
+                    setTimeout(() => {
+                        if(globalState.status === 'playing') switchScreen('ui-layer');
+                    }, 3000);
+                }, 500);
+
+            } else if (newStatus === 'meeting') {
+                switchScreen('meeting-screen');
+            } else if (newStatus === 'lobby') {
+                switchScreen('wait-screen');
+            }
+        }
+
+        // --- ゲーム内アクション ---
+        async function catchCrew() {
+            if (me.role !== 'alien' || !me.isAlive) return;
+
+            // 一番近い生きているクルーを探す
+            let closestId = null;
+            let minDistance = 150; // キャッチできる距離
+
+            Object.entries(players).forEach(([id, p]) => {
+                if (id !== userId && p.isAlive && p.role === 'crew') {
+                    const dist = Math.hypot(me.x - p.x, me.y - p.y);
+                    if (dist < minDistance) {
+                        minDistance = dist;
+                        closestId = id;
+                    }
+                }
+            });
+
+            if (closestId) {
+                const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, closestId);
+                await updateDoc(pRef, { isAlive: false });
+                
+                // エフェクトっぽく一瞬ボタンを非表示に
+                const btn = document.getElementById('btn-catch');
+                btn.style.display = 'none';
+                setTimeout(() => { if(me.isAlive && globalState.status === 'playing') btn.style.display = 'block'; }, 3000); // 3秒クールダウン
+            }
+        }
+
+        async function callMeeting() {
+            if (!me.isAlive) return;
+            const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
+            await updateDoc(globalRef, { status: 'meeting', meetingCaller: me.name });
+        }
+
+        async function endMeeting() {
+            const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
+            await updateDoc(globalRef, { status: 'playing' });
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chat-input');
+            const text = input.value.trim();
+            if (!text) return;
+            
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
+            await addDoc(chatCol, {
+                senderId: userId,
+                senderName: me.name,
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = '';
+        }
+
+        // --- D-Pad 操作 ---
+        function setupDPad() {
+            const btnUp = document.getElementById('btn-up');
+            const btnDown = document.getElementById('btn-down');
+            const btnLeft = document.getElementById('btn-left');
+            const btnRight = document.getElementById('btn-right');
+
+            const startMove = (dirX, dirY) => (e) => { e.preventDefault(); dx = dirX; dy = dirY; };
+            const stopMove = (e) => { e.preventDefault(); dx = 0; dy = 0; };
+
+            btnUp.addEventListener('touchstart', startMove(0, -1), {passive: false});
+            btnUp.addEventListener('mousedown', startMove(0, -1));
+            btnDown.addEventListener('touchstart', startMove(0, 1), {passive: false});
+            btnDown.addEventListener('mousedown', startMove(0, 1));
+            btnLeft.addEventListener('touchstart', startMove(-1, 0), {passive: false});
+            btnLeft.addEventListener('mousedown', startMove(-1, 0));
+            btnRight.addEventListener('touchstart', startMove(1, 0), {passive: false});
+            btnRight.addEventListener('mousedown', startMove(1, 0));
+
+            const endEvents = ['touchend', 'touchcancel', 'mouseup', 'mouseleave'];
+            endEvents.forEach(evt => {
+                btnUp.addEventListener(evt, stopMove);
+                btnDown.addEventListener(evt, stopMove);
+                btnLeft.addEventListener(evt, stopMove);
+                btnRight.addEventListener(evt, stopMove);
+            });
+        }
+
+        // --- メインループ ---
+        async function gameLoop() {
+            if (globalState.status === 'playing' && me.isAlive) {
+                // 移動処理
+                if (dx !== 0 || dy !== 0) {
+                    me.x = Math.max(20, Math.min(MAP_SIZE - 20, me.x + dx * speed));
+                    me.y = Math.max(20, Math.min(MAP_SIZE - 20, me.y + dy * speed));
+                }
+
+                // Firebaseへ同期 (100msに1回制限)
+                const now = Date.now();
+                if (now - lastSyncTime > 100 && (dx !== 0 || dy !== 0)) {
+                    lastSyncTime = now;
+                    try {
+                        const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
+                        await updateDoc(pRef, { x: me.x, y: me.y, lastActive: now });
+                    } catch(e) {} // 無視
+                }
+            }
+
+            drawCanvas();
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function drawCanvas() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            if (globalState.status !== 'playing' && globalState.status !== 'meeting') return;
+
+            // カメラ位置 (自分を中心に)
+            const camX = canvas.width / 2 - me.x;
+            const camY = canvas.height / 2 - me.y;
+
+            ctx.save();
+            ctx.translate(camX, camY);
+
+            // 床の描画 (グリッド)
+            ctx.fillStyle = '#1e1b4b';
+            ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 2;
+            for (let i = 0; i <= MAP_SIZE; i += 100) {
+                ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.stroke();
+                ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke();
+            }
+
+            // プレイヤーの描画
+            Object.entries(players).forEach(([id, p]) => {
+                // 自分が生きていて、相手が死んでいる場合、ゴースト（半透明）で描画
+                ctx.globalAlpha = p.isAlive ? 1.0 : 0.3;
+
+                // 円
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
+                ctx.fillStyle = p.color;
+                ctx.fill();
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 3;
+                ctx.stroke();
+
+                // エイリアンの場合、自分がエイリアンなら印をつける
+                if (me.role === 'alien' && p.role === 'alien' && id !== userId) {
+                    ctx.fillStyle = 'red';
+                    ctx.font = '20px sans-serif';
+                    ctx.fillText('👾', p.x - 10, p.y + 8);
+                }
+
+                // 名前
+                ctx.globalAlpha = 1.0;
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 16px "M PLUS Rounded 1c", sans-serif';
+                ctx.textAlign = 'center';
+                // 死んでいる場合は名前に💀をつける
+                ctx.fillText(p.name + (p.isAlive ? '' : ' 💀'), p.x, p.y - 30);
+            });
+
+            ctx.restore();
+            
+            // 死んでしまった場合の画面オーバーレイ
+            if (!me.isAlive && globalState.status === 'playing') {
+                ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = 'white';
+                ctx.font = 'bold 32px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('あなたはつかまりました...', canvas.width/2, 50);
+            }
+        }
+
+        // 初期化実行
+        initGame();
+
+    </script>
+</body>
+</html>
