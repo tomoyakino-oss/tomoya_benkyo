@@ -9,7 +9,7 @@
     <style>
         body {
             font-family: 'M PLUS Rounded 1c', sans-serif;
-            background-color: #1e1b4b; /* 宇宙っぽい濃い紫 */
+            background-color: #1e1b4b;
             color: white;
             touch-action: none;
             overflow: hidden;
@@ -39,7 +39,6 @@
         .dpad-btn:active {
             background: rgba(255, 255, 255, 0.4);
         }
-        /* スクロールバー隠し */
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -58,28 +57,23 @@
 </head>
 <body>
 
-    <!-- キャンバス (ゲーム画面) -->
     <canvas id="game-canvas"></canvas>
 
-    <!-- UI レイヤー (ゲーム中) -->
     <div id="ui-layer" class="hidden-screen absolute top-0 left-0 w-full h-full pointer-events-none">
-        <!-- 自分の役職表示 -->
         <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full font-bold">
             あなたは: <span id="my-role-text">クルー 👨‍🚀</span>
         </div>
 
-        <!-- D-Pad (左下) -->
         <div class="absolute bottom-8 left-8 pointer-events-auto flex flex-col items-center gap-2">
             <button class="dpad-btn" id="btn-up">🔼</button>
             <div class="flex gap-2">
                 <button class="dpad-btn" id="btn-left">◀️</button>
-                <div class="w-[60px]"></div> <!-- スペーサー -->
+                <div class="w-[60px]"></div>
                 <button class="dpad-btn" id="btn-right">▶️</button>
             </div>
             <button class="dpad-btn" id="btn-down">🔽</button>
         </div>
 
-        <!-- アクションボタン (右下) -->
         <div class="absolute bottom-8 right-8 pointer-events-auto flex flex-col items-end gap-4">
             <button id="btn-catch" class="hidden bg-red-600 border-4 border-red-800 text-white font-bold py-4 px-6 rounded-full shadow-lg text-xl transform transition active:scale-95">
                 👾 つかまえる
@@ -90,7 +84,6 @@
         </div>
     </div>
 
-    <!-- 参加画面 (Lobby) -->
     <div id="join-screen" class="screen-overlay">
         <div class="bg-indigo-900 p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%]">
             <h1 class="text-3xl font-bold text-yellow-300 mb-6 flex flex-col items-center">
@@ -104,9 +97,7 @@
             <input type="text" id="room-password-input" placeholder="合言葉（パスワード）" maxlength="15"
                    class="w-full text-black px-4 py-3 rounded-xl text-xl font-bold mb-4 text-center focus:outline-none focus:ring-4 focus:ring-yellow-400">
 
-            <div class="mb-6 flex justify-center gap-2" id="color-picker">
-                <!-- 色ボタンはJSで生成 -->
-            </div>
+            <div class="mb-6 flex justify-center gap-2" id="color-picker"></div>
 
             <button id="btn-join" class="w-full bg-green-500 hover:bg-green-400 border-b-4 border-green-700 text-white font-bold py-3 px-6 rounded-xl text-xl transition-all">
                 ゲームにはいる
@@ -114,14 +105,11 @@
         </div>
     </div>
 
-    <!-- 待機画面 (Lobby Wait) -->
     <div id="wait-screen" class="screen-overlay hidden-screen">
         <div class="bg-indigo-900 p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%] flex flex-col h-[70vh]">
             <h2 class="text-2xl font-bold text-white mb-4">ロビー</h2>
             <div class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4">
-                <ul id="lobby-player-list" class="space-y-2 text-lg">
-                    <!-- プレイヤーリスト -->
-                </ul>
+                <ul id="lobby-player-list" class="space-y-2 text-lg"></ul>
             </div>
             <p class="text-yellow-300 mb-4 font-bold" id="lobby-status">みんなをまっています...</p>
             <button id="btn-start" class="w-full bg-blue-500 hover:bg-blue-400 border-b-4 border-blue-700 text-white font-bold py-3 px-6 rounded-xl text-xl transition-all">
@@ -130,7 +118,6 @@
         </div>
     </div>
 
-    <!-- 役職発表画面 -->
     <div id="role-screen" class="screen-overlay hidden-screen justify-center items-center">
         <div class="text-center animate-bounce">
             <h2 id="role-title" class="text-5xl font-bold mb-4"></h2>
@@ -138,7 +125,6 @@
         </div>
     </div>
 
-    <!-- 会議・チャット画面 -->
     <div id="meeting-screen" class="screen-overlay hidden-screen">
         <div class="bg-indigo-900 p-4 rounded-3xl border-4 border-yellow-500 shadow-2xl max-w-md w-[95%] h-[80vh] flex flex-col">
             <h2 class="text-2xl font-bold text-center text-yellow-400 mb-2 flex items-center justify-center gap-2">
@@ -146,9 +132,7 @@
             </h2>
             <p class="text-center text-sm mb-4">エイリアンはだれだ！？はなしあおう！</p>
             
-            <div id="chat-messages" class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4 flex flex-col gap-2">
-                <!-- チャットメッセージ -->
-            </div>
+            <div id="chat-messages" class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4 flex flex-col gap-2"></div>
 
             <div class="flex gap-2 mb-4 shrink-0">
                 <input type="text" id="chat-input" placeholder="メッセージ..." maxlength="30"
@@ -164,7 +148,6 @@
         </div>
     </div>
 
-    <!-- メッセージ表示用モーダル -->
     <div id="alert-modal" class="screen-overlay hidden-screen z-[100]">
         <div class="bg-gray-800 p-6 rounded-2xl border-2 border-gray-600 text-center max-w-xs">
             <p id="alert-text" class="text-lg font-bold mb-4"></p>
@@ -172,7 +155,7 @@
         </div>
     </div>
 
-<script type="module">
+    <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -191,12 +174,10 @@
         const appId = 'spaceship-panic';
         let auth, db, userId, currentRoomId;
         
-        // --- ゲーム状態 ---
         let me = { name: '', color: '#ef4444', x: 500, y: 500, isAlive: true, role: 'crew' };
         let players = {};
         let globalState = { status: 'lobby', alienId: null, meetingCaller: null };
         
-        // --- 操作・描画関連 ---
         const canvas = document.getElementById('game-canvas');
         const ctx = canvas.getContext('2d');
         const MAP_SIZE = 2000;
@@ -205,7 +186,6 @@
         let lastSyncTime = 0;
         let animationFrameId;
 
-        // --- カラーパレット ---
         const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#ec4899', '#a855f7', '#f97316', '#ffffff'];
         const colorPicker = document.getElementById('color-picker');
         colors.forEach(color => {
@@ -220,7 +200,6 @@
             colorPicker.appendChild(btn);
         });
 
-        // --- ユーティリティ ---
         function showAlert(msg) {
             document.getElementById('alert-text').innerText = msg;
             document.getElementById('alert-modal').classList.remove('hidden-screen');
@@ -236,7 +215,6 @@
             if(screenId) document.getElementById(screenId).classList.remove('hidden-screen');
         }
 
-        // --- Firebase 初期化 ---
         async function initGame() {
             try {
                 const app = initializeApp(firebaseConfig);
@@ -246,7 +224,6 @@
                 const cred = await signInAnonymously(auth);
                 userId = cred.user.uid;
                 
-                // ボタンの有効化
                 document.getElementById('btn-join').onclick = joinGame;
                 document.getElementById('btn-start').onclick = startGame;
                 document.getElementById('btn-meeting').onclick = callMeeting;
@@ -255,11 +232,9 @@
                 document.getElementById('btn-catch').onclick = catchCrew;
                 setupDPad();
 
-                // キャンバスリサイズ
                 window.addEventListener('resize', resizeCanvas);
                 resizeCanvas();
 
-                // 描画ループ開始
                 requestAnimationFrame(gameLoop);
 
             } catch (error) {
@@ -273,7 +248,6 @@
             canvas.height = window.innerHeight;
         }
 
-        // --- 画面遷移ロジック ---
         async function joinGame() {
             const nameInput = document.getElementById('player-name-input').value.trim();
             const passwordInput = document.getElementById('room-password-input').value.trim();
@@ -294,7 +268,6 @@
 
             switchScreen('wait-screen');
 
-            // プレイヤーデータの保存
             const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
             await setDoc(playerRef, {
                 name: me.name,
