@@ -24,21 +24,30 @@
             width: 100vw;
             height: 100vh;
         }
+        
+        /* スマホ向け 十字キーサイズ */
         .dpad-btn {
             background: rgba(255, 255, 255, 0.2);
             border: 2px solid rgba(255, 255, 255, 0.4);
-            border-radius: 16px;
-            width: 60px;
-            height: 60px;
+            border-radius: 12px;
+            width: 50px;
+            height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 20px;
             touch-action: none;
         }
-        .dpad-btn:active {
-            background: rgba(255, 255, 255, 0.4);
+        /* PC向け 十字キーサイズ */
+        @media (min-width: 768px) {
+            .dpad-btn {
+                border-radius: 16px;
+                width: 60px;
+                height: 60px;
+                font-size: 24px;
+            }
         }
+
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
@@ -51,6 +60,8 @@
             align-items: center;
             justify-content: center;
             z-index: 50;
+            overflow-y: auto; /* 画面が小さい時はスクロール可能に */
+            padding: 20px 0;
         }
         .hidden-screen { display: none !important; }
     </style>
@@ -60,24 +71,28 @@
     <canvas id="game-canvas"></canvas>
 
     <!-- UIレイヤー (プレイ中) -->
-    <div id="ui-layer" class="hidden-screen absolute top-0 left-0 w-full h-full pointer-events-none">
-        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full font-bold">
+    <div id="ui-layer" class="hidden-screen absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+        <div class="absolute top-4 left-1/2 transform -translate-x-1/2 bg-black/50 px-4 py-2 rounded-full font-bold text-sm md:text-base whitespace-nowrap">
             あなたは: <span id="my-role-text">クルー 👨‍🚀</span>
         </div>
-        <div class="absolute bottom-8 left-8 pointer-events-auto flex flex-col items-center gap-2">
+        
+        <!-- 左下: 十字キー -->
+        <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 pointer-events-auto flex flex-col items-center gap-1 md:gap-2">
             <button class="dpad-btn" id="btn-up">🔼</button>
-            <div class="flex gap-2">
+            <div class="flex gap-1 md:gap-2">
                 <button class="dpad-btn" id="btn-left">◀️</button>
-                <div class="w-[60px]"></div>
+                <div class="w-[50px] md:w-[60px]"></div>
                 <button class="dpad-btn" id="btn-right">▶️</button>
             </div>
             <button class="dpad-btn" id="btn-down">🔽</button>
         </div>
-        <div class="absolute bottom-8 right-8 pointer-events-auto flex flex-col items-end gap-4">
-            <button id="btn-catch" class="hidden bg-red-600 border-4 border-red-800 text-white font-bold py-4 px-6 rounded-full shadow-lg text-xl transform transition active:scale-95">
+        
+        <!-- 右下: アクションボタン -->
+        <div class="absolute bottom-4 right-4 md:bottom-8 md:right-8 pointer-events-auto flex flex-col items-end gap-2 md:gap-4">
+            <button id="btn-catch" class="hidden bg-red-600 border-4 border-red-800 text-white font-bold py-3 px-4 md:py-4 md:px-6 rounded-full shadow-lg text-sm md:text-xl transform transition active:scale-95">
                 👾 つかまえる
             </button>
-            <button id="btn-meeting" class="bg-yellow-400 border-4 border-yellow-600 text-black font-bold py-4 px-6 rounded-full shadow-lg text-xl transform transition active:scale-95">
+            <button id="btn-meeting" class="bg-yellow-400 border-4 border-yellow-600 text-black font-bold py-3 px-4 md:py-4 md:px-6 rounded-full shadow-lg text-sm md:text-xl transform transition active:scale-95">
                 🚨 きんきゅうかいぎ
             </button>
         </div>
@@ -85,37 +100,37 @@
 
     <!-- 最初の参加・モード選択画面 -->
     <div id="join-screen" class="screen-overlay">
-        <div class="bg-indigo-900 p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%]">
-            <h1 class="text-3xl font-bold text-yellow-300 mb-4 flex flex-col items-center">
-                <span class="text-5xl mb-2">🚀</span>うちゅうせんパニック
+        <div class="bg-indigo-900 p-6 md:p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%] my-auto flex-shrink-0">
+            <h1 class="text-2xl md:text-3xl font-bold text-yellow-300 mb-4 flex flex-col items-center">
+                <span class="text-4xl md:text-5xl mb-2">🚀</span>うちゅうせんパニック
             </h1>
             <input type="text" id="player-name-input" placeholder="なまえをいれてね" maxlength="8"
-                   class="w-full text-black px-4 py-3 rounded-xl text-xl font-bold mb-4 text-center focus:outline-none focus:ring-4 focus:ring-yellow-400">
-            <div class="mb-4 flex justify-center gap-2" id="color-picker"></div>
+                   class="w-full text-black px-4 py-2 md:py-3 rounded-xl text-lg md:text-xl font-bold mb-4 text-center focus:outline-none focus:ring-4 focus:ring-yellow-400">
+            <div class="mb-4 flex justify-center gap-2 flex-wrap" id="color-picker"></div>
             
-            <hr class="my-6 border-indigo-500">
+            <hr class="my-4 md:my-6 border-indigo-500">
             
             <!-- ひとりで遊ぶ -->
             <div class="mb-4">
-                <p class="text-white font-bold mb-2">🤖 ひとりで遊ぶ（CPU対戦）</p>
+                <p class="text-white font-bold mb-2 text-sm md:text-base">🤖 ひとりで遊ぶ（CPU対戦）</p>
                 <div class="flex justify-center gap-2 mb-2">
-                    <label class="text-sm"><input type="radio" name="cpu-level" value="easy" checked> やさしい</label>
-                    <label class="text-sm"><input type="radio" name="cpu-level" value="normal"> ふつう</label>
-                    <label class="text-sm"><input type="radio" name="cpu-level" value="hard"> むずかしい</label>
+                    <label class="text-xs md:text-sm"><input type="radio" name="cpu-level" value="easy" checked> やさしい</label>
+                    <label class="text-xs md:text-sm"><input type="radio" name="cpu-level" value="normal"> ふつう</label>
+                    <label class="text-xs md:text-sm"><input type="radio" name="cpu-level" value="hard"> むずかしい</label>
                 </div>
-                <button id="btn-solo" class="w-full bg-orange-500 hover:bg-orange-400 border-b-4 border-orange-700 text-white font-bold py-3 px-6 rounded-xl text-xl transition-all">
+                <button id="btn-solo" class="w-full bg-orange-500 hover:bg-orange-400 border-b-4 border-orange-700 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl text-lg md:text-xl transition-all">
                     ひとりで遊ぶ
                 </button>
             </div>
             
-            <hr class="my-6 border-indigo-500">
+            <hr class="my-4 md:my-6 border-indigo-500">
             
             <!-- みんなで遊ぶ -->
             <div>
-                <p class="text-white font-bold mb-2">🌐 みんなで遊ぶ（オンライン）</p>
+                <p class="text-white font-bold mb-2 text-sm md:text-base">🌐 みんなで遊ぶ（オンライン）</p>
                 <input type="text" id="room-password-input" placeholder="合言葉（パスワード）" maxlength="15"
-                       class="w-full text-black px-4 py-3 rounded-xl text-xl font-bold mb-4 text-center focus:outline-none focus:ring-4 focus:ring-yellow-400">
-                <button id="btn-multi" class="w-full bg-green-500 hover:bg-green-400 border-b-4 border-green-700 text-white font-bold py-3 px-6 rounded-xl text-xl transition-all">
+                       class="w-full text-black px-4 py-2 md:py-3 rounded-xl text-lg md:text-xl font-bold mb-4 text-center focus:outline-none focus:ring-4 focus:ring-yellow-400">
+                <button id="btn-multi" class="w-full bg-green-500 hover:bg-green-400 border-b-4 border-green-700 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl text-lg md:text-xl transition-all">
                     みんなで遊ぶ
                 </button>
             </div>
@@ -124,13 +139,13 @@
 
     <!-- マルチプレイ用 ロビー待機画面 -->
     <div id="wait-screen" class="screen-overlay hidden-screen">
-        <div class="bg-indigo-900 p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%] flex flex-col h-[70vh]">
-            <h2 class="text-2xl font-bold text-white mb-4">ロビー</h2>
+        <div class="bg-indigo-900 p-6 md:p-8 rounded-3xl border-4 border-indigo-500 shadow-2xl text-center max-w-sm w-[90%] flex flex-col h-[70vh] my-auto flex-shrink-0">
+            <h2 class="text-xl md:text-2xl font-bold text-white mb-4">ロビー</h2>
             <div class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4">
-                <ul id="lobby-player-list" class="space-y-2 text-lg"></ul>
+                <ul id="lobby-player-list" class="space-y-2 text-base md:text-lg"></ul>
             </div>
-            <p class="text-yellow-300 mb-4 font-bold" id="lobby-status">みんなをまっています...</p>
-            <button id="btn-start-multi" class="w-full bg-blue-500 hover:bg-blue-400 border-b-4 border-blue-700 text-white font-bold py-3 px-6 rounded-xl text-xl transition-all">
+            <p class="text-yellow-300 mb-4 font-bold text-sm md:text-base" id="lobby-status">みんなをまっています...</p>
+            <button id="btn-start-multi" class="w-full bg-blue-500 hover:bg-blue-400 border-b-4 border-blue-700 text-white font-bold py-3 px-6 rounded-xl text-lg md:text-xl transition-all">
                 ゲームスタート！
             </button>
         </div>
@@ -139,22 +154,22 @@
     <!-- 役職発表画面 -->
     <div id="role-screen" class="screen-overlay hidden-screen justify-center items-center">
         <div class="text-center animate-bounce">
-            <h2 id="role-title" class="text-5xl font-bold mb-4"></h2>
-            <p id="role-desc" class="text-xl"></p>
+            <h2 id="role-title" class="text-4xl md:text-5xl font-bold mb-4"></h2>
+            <p id="role-desc" class="text-lg md:text-xl"></p>
         </div>
     </div>
 
     <!-- 会議画面 -->
     <div id="meeting-screen" class="screen-overlay hidden-screen">
-        <div class="bg-indigo-900 p-4 rounded-3xl border-4 border-yellow-500 shadow-2xl max-w-md w-[95%] h-[80vh] flex flex-col">
-            <h2 class="text-2xl font-bold text-center text-yellow-400 mb-2">🚨 きんきゅうかいぎ 🚨</h2>
-            <p class="text-center text-sm mb-4" id="meeting-desc">エイリアンはだれだ！？</p>
+        <div class="bg-indigo-900 p-4 rounded-3xl border-4 border-yellow-500 shadow-2xl max-w-md w-[95%] h-[85vh] md:h-[80vh] flex flex-col my-auto flex-shrink-0">
+            <h2 class="text-xl md:text-2xl font-bold text-center text-yellow-400 mb-2">🚨 きんきゅうかいぎ 🚨</h2>
+            <p class="text-center text-xs md:text-sm mb-4" id="meeting-desc">エイリアンはだれだ！？</p>
             <div id="chat-messages" class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4 flex flex-col gap-2"></div>
             <div class="flex gap-2 mb-4 shrink-0">
-                <input type="text" id="chat-input" placeholder="メッセージ..." maxlength="30" class="flex-grow text-black px-4 py-2 rounded-xl text-lg focus:outline-none">
-                <button id="btn-send-chat" class="bg-green-500 text-white font-bold py-2 px-4 rounded-xl">そうしん</button>
+                <input type="text" id="chat-input" placeholder="メッセージ..." maxlength="30" class="flex-grow text-black px-4 py-2 rounded-xl text-base md:text-lg focus:outline-none">
+                <button id="btn-send-chat" class="bg-green-500 text-white font-bold py-2 px-4 rounded-xl text-sm md:text-base">そうしん</button>
             </div>
-            <button id="btn-end-meeting" class="w-full bg-red-500 hover:bg-red-400 border-b-4 border-red-700 text-white font-bold py-3 px-6 rounded-xl text-lg transition-all shrink-0">
+            <button id="btn-end-meeting" class="w-full bg-red-500 hover:bg-red-400 border-b-4 border-red-700 text-white font-bold py-3 px-6 rounded-xl text-base md:text-lg transition-all shrink-0">
                 かいぎをおわる
             </button>
         </div>
@@ -162,8 +177,8 @@
 
     <!-- アラート -->
     <div id="alert-modal" class="screen-overlay hidden-screen z-[100]">
-        <div class="bg-gray-800 p-6 rounded-2xl border-2 border-gray-600 text-center max-w-xs">
-            <p id="alert-text" class="text-lg font-bold mb-4"></p>
+        <div class="bg-gray-800 p-6 rounded-2xl border-2 border-gray-600 text-center max-w-xs my-auto">
+            <p id="alert-text" class="text-base md:text-lg font-bold mb-4"></p>
             <button id="btn-alert-ok" class="bg-blue-500 text-white font-bold py-2 px-6 rounded-xl">OK</button>
         </div>
     </div>
@@ -190,9 +205,8 @@
         let me = { name: '', color: '#ef4444', x: 500, y: 500, isAlive: true, role: 'crew' };
         let players = {};
         let globalState = { status: 'lobby', alienId: null, meetingCaller: null };
-        let gameMode = 'multi'; // 'multi' or 'solo'
+        let gameMode = 'multi'; 
         
-        // CPU処理用変数
         let cpuLevel = 'easy';
         let cpuTimer = null;
         let cpuData = []; 
@@ -236,7 +250,6 @@
 
         async function initGame() {
             try {
-                // Multi用 Firebase 初期化
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
@@ -268,7 +281,7 @@
         }
 
         /* -------------------------------------------
-           オンライン マルチプレイ機能 (Firebase連携)
+           オンライン マルチプレイ機能
         ------------------------------------------- */
         async function joinMultiGame() {
             gameMode = 'multi';
@@ -371,14 +384,13 @@
 
 
         /* -------------------------------------------
-           ひとりで遊ぶ（CPU対戦）機能 (ローカル処理)
+           ひとりで遊ぶ（CPU対戦）機能
         ------------------------------------------- */
         function startSoloGame() {
             gameMode = 'solo';
             const nameInput = document.getElementById('player-name-input').value.trim();
             if (!nameInput) { showAlert('なまえをいれてね！'); return; }
             
-            // 難易度取得
             const diffRadios = document.getElementsByName('cpu-level');
             for(let r of diffRadios){ if(r.checked) cpuLevel = r.value; }
 
@@ -387,7 +399,6 @@
             me.y = Math.random() * (MAP_SIZE - 200) + 100;
             me.isAlive = true;
 
-            // CPUダミー作成 (3人)
             const botNames = ['ロボット1号', 'ロボット2号', 'ロボット3号'];
             const botColors = ['#3b82f6', '#22c55e', '#eab308'].filter(c => c !== me.color);
             players = {};
@@ -398,14 +409,10 @@
                 const bId = 'bot_' + i;
                 const bx = Math.random() * (MAP_SIZE - 200) + 100;
                 const by = Math.random() * (MAP_SIZE - 200) + 100;
-                players[bId] = {
-                    name: botNames[i], color: botColors[i] || '#ffffff',
-                    x: bx, y: by, isAlive: true, role: 'crew'
-                };
+                players[bId] = { name: botNames[i], color: botColors[i] || '#ffffff', x: bx, y: by, isAlive: true, role: 'crew' };
                 cpuData.push({ id: bId, targetX: bx, targetY: by, speed: 2 });
             }
 
-            // 役職ランダム決定
             const allIds = Object.keys(players);
             const alienId = allIds[Math.floor(Math.random() * allIds.length)];
             allIds.forEach(id => players[id].role = (id === alienId) ? 'alien' : 'crew');
@@ -420,29 +427,20 @@
             startCPUAI();
         }
 
-        // CPUのAIロジック
         function startCPUAI() {
             if (cpuTimer) clearInterval(cpuTimer);
-            let aiSpeed = 2; 
-            let moveInterval = 1500;
-            let catchDist = 80;
-
+            let aiSpeed = 2; let moveInterval = 1500; let catchDist = 80;
             if (cpuLevel === 'normal') { aiSpeed = 3; moveInterval = 1000; catchDist = 120; }
             if (cpuLevel === 'hard') { aiSpeed = 4.5; moveInterval = 500; catchDist = 180; }
 
-            // 目的地を一定間隔で更新するタイマー
             cpuTimer = setInterval(() => {
                 if (globalState.status !== 'playing') return;
-
                 cpuData.forEach(cpu => {
                     const p = players[cpu.id];
                     if (!p || !p.isAlive) return;
 
-                    // 自分がエイリアンで、クルーを狙うロジック
                     if (p.role === 'alien') {
-                        // 近くの生きているクルーを探す
-                        let closestCrew = null;
-                        let minDist = 9999;
+                        let closestCrew = null; let minDist = 9999;
                         Object.keys(players).forEach(tgtId => {
                             const tgt = players[tgtId];
                             if (tgtId !== cpu.id && tgt.isAlive && tgt.role === 'crew') {
@@ -452,43 +450,28 @@
                         });
 
                         if (closestCrew) {
-                            // 難易度に応じて追尾精度を変える
                             if (cpuLevel === 'hard' || (cpuLevel === 'normal' && Math.random() < 0.7)) {
-                                cpu.targetX = closestCrew.x;
-                                cpu.targetY = closestCrew.y;
+                                cpu.targetX = closestCrew.x; cpu.targetY = closestCrew.y;
                             } else {
-                                cpu.targetX = p.x + (Math.random() - 0.5) * 500;
-                                cpu.targetY = p.y + (Math.random() - 0.5) * 500;
+                                cpu.targetX = p.x + (Math.random() - 0.5) * 500; cpu.targetY = p.y + (Math.random() - 0.5) * 500;
                             }
-
-                            // 捕獲判定
                             if (minDist < catchDist) {
-                                // 最も近いクルーをキル
                                 closestCrew.isAlive = false;
                                 if (closestCrew === me) me.isAlive = false;
                             }
                         }
                     } else {
-                        // クルーの場合はランダム徘徊、またはエイリアンから逃げる
-                        let alienDist = 9999;
-                        let alienObj = null;
+                        let alienDist = 9999; let alienObj = null;
                         if (players[globalState.alienId]) {
                             alienObj = players[globalState.alienId];
                             alienDist = Math.hypot(p.x - alienObj.x, p.y - alienObj.y);
                         }
-
                         if (cpuLevel !== 'easy' && alienDist < 300) {
-                            // 逃げる
-                            cpu.targetX = p.x + (p.x - alienObj.x);
-                            cpu.targetY = p.y + (p.y - alienObj.y);
+                            cpu.targetX = p.x + (p.x - alienObj.x); cpu.targetY = p.y + (p.y - alienObj.y);
                         } else {
-                            // ランダム歩き
-                            cpu.targetX = p.x + (Math.random() - 0.5) * 800;
-                            cpu.targetY = p.y + (Math.random() - 0.5) * 800;
+                            cpu.targetX = p.x + (Math.random() - 0.5) * 800; cpu.targetY = p.y + (Math.random() - 0.5) * 800;
                         }
                     }
-
-                    // 画面外に出ないようにクランプ
                     cpu.targetX = Math.max(50, Math.min(MAP_SIZE - 50, cpu.targetX));
                     cpu.targetY = Math.max(50, Math.min(MAP_SIZE - 50, cpu.targetY));
                     cpu.speed = aiSpeed;
@@ -496,27 +479,20 @@
             }, moveInterval);
         }
 
-        // CPUの滑らかな座標移動処理 (毎フレーム呼ばれる)
         function updateCPUMovement() {
             if (globalState.status !== 'playing') return;
             cpuData.forEach(cpu => {
                 const p = players[cpu.id];
                 if (!p || !p.isAlive) return;
-
-                const dx = cpu.targetX - p.x;
-                const dy = cpu.targetY - p.y;
+                const dx = cpu.targetX - p.x; const dy = cpu.targetY - p.y;
                 const dist = Math.hypot(dx, dy);
-
-                if (dist > 5) {
-                    p.x += (dx / dist) * cpu.speed;
-                    p.y += (dy / dist) * cpu.speed;
-                }
+                if (dist > 5) { p.x += (dx / dist) * cpu.speed; p.y += (dy / dist) * cpu.speed; }
             });
         }
 
 
         /* -------------------------------------------
-           共通アクション処理 (会議・捕獲)
+           共通アクション処理
         ------------------------------------------- */
         function handleStateChange(oldStatus, newStatus, stateData) {
             if (oldStatus === newStatus) return;
@@ -529,11 +505,11 @@
                 setTimeout(() => {
                     if (me.role === 'alien') {
                         title.innerText = "あなたは エイリアン 👾";
-                        title.className = "text-5xl font-bold mb-4 text-red-500";
+                        title.className = "text-4xl md:text-5xl font-bold mb-4 text-red-500";
                         desc.innerText = "クルーにバレずにつかまえろ！";
                     } else {
                         title.innerText = "あなたは クルー 👨‍🚀";
-                        title.className = "text-5xl font-bold mb-4 text-blue-400";
+                        title.className = "text-4xl md:text-5xl font-bold mb-4 text-blue-400";
                         desc.innerText = "エイリアンからにげろ！";
                     }
                     document.getElementById('my-role-text').innerText = me.role === 'alien' ? 'エイリアン 👾' : 'クルー 👨‍🚀';
@@ -546,7 +522,6 @@
             } else if (newStatus === 'meeting') {
                 document.getElementById('meeting-desc').innerText = `🚨 ${globalState.meetingCaller} がかいぎをひらきました！`;
                 if(gameMode === 'solo') {
-                    // Soloモードのチャットモック
                     document.getElementById('chat-messages').innerHTML = '<div class="text-center text-gray-400 text-sm mt-4">CPU対戦ではチャットはできません</div>';
                 }
                 switchScreen('meeting-screen');
@@ -557,10 +532,7 @@
 
         async function catchCrew() {
             if (me.role !== 'alien' || !me.isAlive) return;
-
-            let closestId = null;
-            let minDistance = 150;
-
+            let closestId = null; let minDistance = 150;
             Object.entries(players).forEach(([id, p]) => {
                 if (id !== userId && p.isAlive && p.role === 'crew') {
                     const dist = Math.hypot(me.x - p.x, me.y - p.y);
@@ -575,7 +547,6 @@
                 } else {
                     players[closestId].isAlive = false;
                 }
-                
                 const btn = document.getElementById('btn-catch');
                 btn.style.display = 'none';
                 setTimeout(() => { if(me.isAlive && globalState.status === 'playing') btn.style.display = 'block'; }, 3000);
@@ -588,8 +559,7 @@
                 const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
                 await updateDoc(globalRef, { status: 'meeting', meetingCaller: me.name });
             } else {
-                globalState.status = 'meeting';
-                globalState.meetingCaller = me.name;
+                globalState.status = 'meeting'; globalState.meetingCaller = me.name;
                 handleStateChange('playing', 'meeting', globalState);
             }
         }
@@ -619,6 +589,7 @@
            描画・操作系
         ------------------------------------------- */
         function setupDPad() {
+            // 画面の十字キー（スマホ/マウス用）
             const btnUp = document.getElementById('btn-up');
             const btnDown = document.getElementById('btn-down');
             const btnLeft = document.getElementById('btn-left');
@@ -627,19 +598,32 @@
             const startMove = (dirX, dirY) => (e) => { e.preventDefault(); dx = dirX; dy = dirY; };
             const stopMove = (e) => { e.preventDefault(); dx = 0; dy = 0; };
 
-            btnUp.addEventListener('touchstart', startMove(0, -1), {passive: false});
-            btnUp.addEventListener('mousedown', startMove(0, -1));
-            btnDown.addEventListener('touchstart', startMove(0, 1), {passive: false});
-            btnDown.addEventListener('mousedown', startMove(0, 1));
-            btnLeft.addEventListener('touchstart', startMove(-1, 0), {passive: false});
-            btnLeft.addEventListener('mousedown', startMove(-1, 0));
-            btnRight.addEventListener('touchstart', startMove(1, 0), {passive: false});
-            btnRight.addEventListener('mousedown', startMove(1, 0));
+            btnUp.addEventListener('touchstart', startMove(0, -1), {passive: false}); btnUp.addEventListener('mousedown', startMove(0, -1));
+            btnDown.addEventListener('touchstart', startMove(0, 1), {passive: false}); btnDown.addEventListener('mousedown', startMove(0, 1));
+            btnLeft.addEventListener('touchstart', startMove(-1, 0), {passive: false}); btnLeft.addEventListener('mousedown', startMove(-1, 0));
+            btnRight.addEventListener('touchstart', startMove(1, 0), {passive: false}); btnRight.addEventListener('mousedown', startMove(1, 0));
 
             const endEvents = ['touchend', 'touchcancel', 'mouseup', 'mouseleave'];
             endEvents.forEach(evt => {
                 btnUp.addEventListener(evt, stopMove); btnDown.addEventListener(evt, stopMove);
                 btnLeft.addEventListener(evt, stopMove); btnRight.addEventListener(evt, stopMove);
+            });
+
+            // PC用キーボード操作 (WASD / 矢印キー) の追加
+            window.addEventListener('keydown', (e) => {
+                // チャット入力中は動かさない
+                if (document.activeElement && document.activeElement.tagName === 'INPUT') return;
+                
+                if (['ArrowUp', 'w', 'W'].includes(e.key)) { dx = 0; dy = -1; }
+                if (['ArrowDown', 's', 'S'].includes(e.key)) { dx = 0; dy = 1; }
+                if (['ArrowLeft', 'a', 'A'].includes(e.key)) { dx = -1; dy = 0; }
+                if (['ArrowRight', 'd', 'D'].includes(e.key)) { dx = 1; dy = 0; }
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (['ArrowUp', 'w', 'W', 'ArrowDown', 's', 'S', 'ArrowLeft', 'a', 'A', 'ArrowRight', 'd', 'D'].includes(e.key)) {
+                    dx = 0; dy = 0;
+                }
             });
         }
 
@@ -678,7 +662,6 @@
             ctx.save();
             ctx.translate(camX, camY);
 
-            // 背景とグリッド
             ctx.fillStyle = '#1e1b4b';
             ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
@@ -688,7 +671,6 @@
                 ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke();
             }
 
-            // キャラクター描画
             Object.entries(players).forEach(([id, p]) => {
                 ctx.globalAlpha = p.isAlive ? 1.0 : 0.3;
 
