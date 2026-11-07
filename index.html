@@ -172,32 +172,28 @@
         </div>
     </div>
 
-    <script type="module">
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
-const firebaseConfig = {
-  apiKey: "AIzaSyA2vkuVnAT-MLUUaUlNOswabp5mbUC-teU",
-  authDomain: "amogmane-91e39.firebaseapp.com",
-  databaseURL: "https://amogmane-91e39-default-rtdb.firebaseio.com",
-  projectId: "amogmane-91e39",
-  storageBucket: "amogmane-91e39.firebasestorage.app",
-  messagingSenderId: "904044254664",
-  appId: "1:904044254664:web:e37381dcfa299ec09c9cfd",
-  measurementId: "G-0HL24WP5ML"
-};
-        
+<script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'spaceship-panic';
-        const initialToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+        const firebaseConfig = {
+            apiKey: "AIzaSyA2vkuVnAT-MLUUaUlNOswabp5mbUC-teU",
+            authDomain: "amogmane-91e39.firebaseapp.com",
+            databaseURL: "https://amogmane-91e39-default-rtdb.firebaseio.com",
+            projectId: "amogmane-91e39",
+            storageBucket: "amogmane-91e39.firebasestorage.app",
+            messagingSenderId: "904044254664",
+            appId: "1:904044254664:web:e37381dcfa299ec09c9cfd",
+            measurementId: "G-0HL24WP5ML"
+        };
 
+        const appId = 'spaceship-panic';
         let auth, db, userId, currentRoomId;
         
         // --- ゲーム状態 ---
         let me = { name: '', color: '#ef4444', x: 500, y: 500, isAlive: true, role: 'crew' };
-        let players = {}; // 他のプレイヤーを含む全プレイヤー情報
+        let players = {};
         let globalState = { status: 'lobby', alienId: null, meetingCaller: null };
         
         // --- 操作・描画関連 ---
@@ -242,21 +238,13 @@ const firebaseConfig = {
 
         // --- Firebase 初期化 ---
         async function initGame() {
-            if (!firebaseConfig) {
-                showAlert('エラー: データベース設定がありません。');
-                return;
-            }
             try {
                 const app = initializeApp(firebaseConfig);
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                if (initialToken) {
-                    await signInWithCustomToken(auth, initialToken);
-                } else {
-                    await signInAnonymously(auth);
-                }
-                userId = auth.currentUser.uid;
+                const cred = await signInAnonymously(auth);
+                userId = cred.user.uid;
                 
                 // ボタンの有効化
                 document.getElementById('btn-join').onclick = joinGame;
@@ -276,7 +264,7 @@ const firebaseConfig = {
 
             } catch (error) {
                 console.error(error);
-                showAlert('せつぞくにシッパイしました。');
+                showAlert('せつぞくにシッパイしました: ' + error.message);
             }
         }
 
@@ -306,7 +294,7 @@ const firebaseConfig = {
 
             switchScreen('wait-screen');
 
-            // プレイヤーデータの保存 (RULE 1遵守)
+            // プレイヤーデータの保存
             const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
             await setDoc(playerRef, {
                 name: me.name,
@@ -314,7 +302,7 @@ const firebaseConfig = {
                 x: me.x,
                 y: me.y,
                 isAlive: true,
-                role: 'crew', // 初期値
+                role: 'crew',
                 lastActive: Date.now()
             });
 
@@ -322,7 +310,6 @@ const firebaseConfig = {
         }
 
         function startListening() {
-            // グローバル状態の監視 (RULE 1, 2)
             const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
             onSnapshot(globalRef, (docSnap) => {
                 if (docSnap.exists()) {
@@ -332,7 +319,6 @@ const firebaseConfig = {
                 }
             }, (error) => console.error("Snapshot error:", error));
 
-            // プレイヤー一覧の監視 (RULE 1, 2)
             const playersCol = collection(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`);
             onSnapshot(playersCol, (snapshot) => {
                 const newPlayers = {};
@@ -342,24 +328,20 @@ const firebaseConfig = {
                 players = newPlayers;
                 updateLobbyList();
                 
-                // 自分の状態を同期
                 if (players[userId]) {
                     me.isAlive = players[userId].isAlive;
                     me.role = players[userId].role;
                     
-                    // キャッチボタンの表示制御
                     if (globalState.status === 'playing') {
                         document.getElementById('btn-catch').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
                     }
                 }
             }, (error) => console.error("Snapshot error:", error));
 
-            // チャットの監視
             const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
             onSnapshot(chatCol, (snapshot) => {
                 const chatBox = document.getElementById('chat-messages');
                 chatBox.innerHTML = '';
-                // JS側でソート (RULE 2: クエリでのorderByを避ける)
                 const msgs = [];
                 snapshot.forEach(doc => msgs.push(doc.data()));
                 msgs.sort((a, b) => a.timestamp - b.timestamp);
@@ -393,26 +375,22 @@ const firebaseConfig = {
                 return;
             }
 
-            // ランダムにエイリアンを選ぶ
             const alienId = playerIds[Math.floor(Math.random() * playerIds.length)];
 
-            // 全員の役職をリセット＆設定
             for (let pid of playerIds) {
                 const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, pid);
                 await updateDoc(pRef, { 
                     role: pid === alienId ? 'alien' : 'crew',
                     isAlive: true,
-                    x: Math.random() * (MAP_SIZE - 200) + 100, // 初期位置もランダムに
+                    x: Math.random() * (MAP_SIZE - 200) + 100,
                     y: Math.random() * (MAP_SIZE - 200) + 100
                 });
             }
 
-            // 古いチャットをクリア (簡易的にドキュメント取得して削除)
             const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
             const chatDocs = await getDocs(chatCol);
             chatDocs.forEach(d => deleteDoc(d.ref));
 
-            // グローバル状態をplayingに
             const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
             await setDoc(globalRef, { status: 'playing', alienId: alienId, meetingCaller: null });
         }
@@ -421,12 +399,10 @@ const firebaseConfig = {
             if (oldStatus === newStatus) return;
 
             if (newStatus === 'playing') {
-                // 役職発表画面
                 switchScreen('role-screen');
                 const title = document.getElementById('role-title');
                 const desc = document.getElementById('role-desc');
                 
-                // Firestoreからの同期が完了するのを少し待つ
                 setTimeout(() => {
                     if (me.role === 'alien') {
                         title.innerText = "あなたは エイリアン 👾";
@@ -451,13 +427,11 @@ const firebaseConfig = {
             }
         }
 
-        // --- ゲーム内アクション ---
         async function catchCrew() {
             if (me.role !== 'alien' || !me.isAlive) return;
 
-            // 一番近い生きているクルーを探す
             let closestId = null;
-            let minDistance = 150; // キャッチできる距離
+            let minDistance = 150;
 
             Object.entries(players).forEach(([id, p]) => {
                 if (id !== userId && p.isAlive && p.role === 'crew') {
@@ -473,10 +447,9 @@ const firebaseConfig = {
                 const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, closestId);
                 await updateDoc(pRef, { isAlive: false });
                 
-                // エフェクトっぽく一瞬ボタンを非表示に
                 const btn = document.getElementById('btn-catch');
                 btn.style.display = 'none';
-                setTimeout(() => { if(me.isAlive && globalState.status === 'playing') btn.style.display = 'block'; }, 3000); // 3秒クールダウン
+                setTimeout(() => { if(me.isAlive && globalState.status === 'playing') btn.style.display = 'block'; }, 3000);
             }
         }
 
@@ -506,7 +479,6 @@ const firebaseConfig = {
             input.value = '';
         }
 
-        // --- D-Pad 操作 ---
         function setupDPad() {
             const btnUp = document.getElementById('btn-up');
             const btnDown = document.getElementById('btn-down');
@@ -534,23 +506,20 @@ const firebaseConfig = {
             });
         }
 
-        // --- メインループ ---
         async function gameLoop() {
             if (globalState.status === 'playing' && me.isAlive) {
-                // 移動処理
                 if (dx !== 0 || dy !== 0) {
                     me.x = Math.max(20, Math.min(MAP_SIZE - 20, me.x + dx * speed));
                     me.y = Math.max(20, Math.min(MAP_SIZE - 20, me.y + dy * speed));
                 }
 
-                // Firebaseへ同期 (100msに1回制限)
                 const now = Date.now();
                 if (now - lastSyncTime > 100 && (dx !== 0 || dy !== 0)) {
                     lastSyncTime = now;
                     try {
                         const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
                         await updateDoc(pRef, { x: me.x, y: me.y, lastActive: now });
-                    } catch(e) {} // 無視
+                    } catch(e) {}
                 }
             }
 
@@ -563,14 +532,12 @@ const firebaseConfig = {
 
             if (globalState.status !== 'playing' && globalState.status !== 'meeting') return;
 
-            // カメラ位置 (自分を中心に)
             const camX = canvas.width / 2 - me.x;
             const camY = canvas.height / 2 - me.y;
 
             ctx.save();
             ctx.translate(camX, camY);
 
-            // 床の描画 (グリッド)
             ctx.fillStyle = '#1e1b4b';
             ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
@@ -580,12 +547,9 @@ const firebaseConfig = {
                 ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke();
             }
 
-            // プレイヤーの描画
             Object.entries(players).forEach(([id, p]) => {
-                // 自分が生きていて、相手が死んでいる場合、ゴースト（半透明）で描画
                 ctx.globalAlpha = p.isAlive ? 1.0 : 0.3;
 
-                // 円
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, 20, 0, Math.PI * 2);
                 ctx.fillStyle = p.color;
@@ -594,25 +558,21 @@ const firebaseConfig = {
                 ctx.lineWidth = 3;
                 ctx.stroke();
 
-                // エイリアンの場合、自分がエイリアンなら印をつける
                 if (me.role === 'alien' && p.role === 'alien' && id !== userId) {
                     ctx.fillStyle = 'red';
                     ctx.font = '20px sans-serif';
                     ctx.fillText('👾', p.x - 10, p.y + 8);
                 }
 
-                // 名前
                 ctx.globalAlpha = 1.0;
                 ctx.fillStyle = 'white';
                 ctx.font = 'bold 16px "M PLUS Rounded 1c", sans-serif';
                 ctx.textAlign = 'center';
-                // 死んでいる場合は名前に💀をつける
                 ctx.fillText(p.name + (p.isAlive ? '' : ' 💀'), p.x, p.y - 30);
             });
 
             ctx.restore();
             
-            // 死んでしまった場合の画面オーバーレイ
             if (!me.isAlive && globalState.status === 'playing') {
                 ctx.fillStyle = 'rgba(255, 0, 0, 0.2)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -623,9 +583,7 @@ const firebaseConfig = {
             }
         }
 
-        // 初期化実行
         initGame();
-
     </script>
 </body>
 </html>
