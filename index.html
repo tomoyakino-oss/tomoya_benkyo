@@ -221,7 +221,104 @@
         let me = { name: '', color: '#ef4444', x: 1000, y: 500, isAlive: true, role: 'crew', isStealth: false, angle: 0, isDancing: false };
         let players = {};
         
-        let globalState = { status: 'lobby', alienIds: [], meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 1, winner: null, deadBodies: [] };
+        // ✨ 動的生成されるマップ要素
+        let walls = [];
+        let meteors = [];
+        let traps = [];
+        let taskStations = [];
+
+        // 🧱 5種類のマッププリセット
+        const PRESET_WALLS = [
+            // 0: スタンダード（十字路＋小部屋）
+            [
+                {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000},
+                {x: 40, y: 600, w: 200, h: 40}, {x: 400, y: 40, w: 40, h: 200}, {x: 700, y: 40, w: 40, h: 200}, {x: 1260, y: 40, w: 40, h: 200}, {x: 700, y: 340, w: 450, h: 40}, 
+                {x: 1560, y: 40, w: 40, h: 200}, {x: 1760, y: 600, w: 200, h: 40}, 
+                {x: 40, y: 1300, w: 200, h: 40}, {x: 400, y: 900, w: 40, h: 300}, 
+                {x: 800, y: 800, w: 150, h: 400}, {x: 1050, y: 800, w: 150, h: 400},
+                {x: 1760, y: 1300, w: 200, h: 40}, {x: 1560, y: 900, w: 40, h: 300}, 
+                {x: 40, y: 1600, w: 200, h: 40}, {x: 400, y: 1750, w: 40, h: 210}, 
+                {x: 700, y: 1750, w: 40, h: 210}, {x: 1260, y: 1750, w: 40, h: 210}, {x: 700, y: 1600, w: 450, h: 40}, 
+                {x: 1560, y: 1750, w: 40, h: 210}, {x: 1760, y: 1600, w: 200, h: 40}, 
+                {x: 600, y: 500, w: 40, h: 100}, {x: 1360, y: 500, w: 40, h: 100}, 
+                {x: 600, y: 1400, w: 40, h: 100}, {x: 1360, y: 1400, w: 40, h: 100}
+            ],
+            // 1: 渡り廊下型
+            [
+                {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000},
+                {x: 800, y: 40, w: 400, h: 600}, {x: 800, y: 1360, w: 400, h: 600},
+                {x: 400, y: 400, w: 40, h: 400}, {x: 400, y: 1200, w: 40, h: 400},
+                {x: 1560, y: 400, w: 40, h: 400}, {x: 1560, y: 1200, w: 40, h: 400}
+            ],
+            // 2: アリーナ型
+            [
+                {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000},
+                {x: 300, y: 300, w: 300, h: 40}, {x: 300, y: 300, w: 40, h: 300},
+                {x: 1400, y: 300, w: 300, h: 40}, {x: 1660, y: 300, w: 40, h: 300},
+                {x: 300, y: 1660, w: 300, h: 40}, {x: 300, y: 1400, w: 40, h: 300},
+                {x: 1400, y: 1660, w: 300, h: 40}, {x: 1660, y: 1400, w: 40, h: 300},
+                {x: 960, y: 40, w: 80, h: 200}, {x: 960, y: 1760, w: 80, h: 200}
+            ],
+            // 3: 回廊型
+            [
+                {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000},
+                {x: 600, y: 600, w: 800, h: 800},
+                {x: 300, y: 40, w: 40, h: 300}, {x: 1660, y: 40, w: 40, h: 300},
+                {x: 300, y: 1660, w: 40, h: 300}, {x: 1660, y: 1660, w: 40, h: 300},
+                {x: 40, y: 1000, w: 300, h: 40}, {x: 1660, y: 1000, w: 300, h: 40}
+            ],
+            // 4: S字迷路型
+            [
+                {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000},
+                {x: 600, y: 40, w: 40, h: 1200}, {x: 1360, y: 760, w: 40, h: 1200},
+                {x: 200, y: 600, w: 200, h: 40}, {x: 200, y: 1200, w: 200, h: 40},
+                {x: 1600, y: 800, w: 200, h: 40}, {x: 1600, y: 1400, w: 200, h: 40}
+            ]
+        ];
+
+        // 🌟 ランダムで安全な座標を計算（壁・隕石・トラップから距離をあける）
+        function getRandomSafePosition(radius = 40) {
+            let rx, ry, safe;
+            for(let i=0; i<200; i++) {
+                rx = 100 + Math.random() * (MAP_SIZE - 200); ry = 100 + Math.random() * (MAP_SIZE - 200); safe = true;
+                walls.forEach(w => { if (rx > w.x - radius && rx < w.x + w.w + radius && ry > w.y - radius && ry < w.y + w.h + radius) safe = false; });
+                if(!safe) continue;
+                traps.forEach(t => { if (Math.hypot(rx - t.x, ry - t.y) < t.r + radius + 20) safe = false; });
+                if(!safe) continue;
+                meteors.forEach(m => { if (Math.hypot(rx - m.x, ry - m.y) < m.r + radius + 20) safe = false; });
+                if(!safe) continue;
+                // 他のタスクステーションとも少し離す
+                taskStations.forEach(ts => { if (Math.hypot(rx - ts.x, ry - ts.y) < 100) safe = false; });
+                if(safe) return {x: rx, y: ry};
+            }
+            return {x: 1000, y: 500}; // 見つからなければ中央付近
+        }
+
+        // 🌟 マップ（壁、隕石、トラップ、タスク）を動的に生成
+        function generateMapLayout() {
+            const mapIndex = Math.floor(Math.random() * PRESET_WALLS.length);
+            walls = PRESET_WALLS[mapIndex]; // 一時的にセット
+            meteors = []; traps = []; taskStations = []; 
+
+            const meteorCount = 5 + Math.floor(Math.random() * 3);
+            for(let i=0; i<meteorCount; i++) {
+                const r = 50 + Math.random()*40; const p = getRandomSafePosition(r + 20); meteors.push({x: p.x, y: p.y, r: r});
+            }
+
+            const trapCount = 2 + Math.floor(Math.random() * 3);
+            for(let i=0; i<trapCount; i++) {
+                const r = 40 + Math.random()*20; const p = getRandomSafePosition(r + 20); traps.push({x: p.x, y: p.y, r: r});
+            }
+
+            const taskNames = ["エンジン出力", "通信アンテナ", "配電盤", "酸素フィルター", "レーダー", "ナビ", "シールド展開", "リアクター", "武器庫", "医務室", "カフェ", "倉庫整理", "カメラ", "エアロック", "ゴミ処理"];
+            for(let i=0; i<15; i++) { // 🌟 タスクを15個に制限
+                const p = getRandomSafePosition(40); taskStations.push({x: p.x, y: p.y, id: 't'+(i+1), name: taskNames[i]});
+            }
+
+            return { mapIndex, meteors, traps, taskStations };
+        }
+
+        let globalState = { status: 'lobby', alienIds: [], meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 15, winner: null, deadBodies: [], mapLayout: null };
         let gameMode = 'none'; 
         
         let cpuLevel = 'easy'; let cpuTimer = null; let cpuData = []; 
@@ -234,57 +331,8 @@
         const VISION_RADIUS_ALIEN = 500;
 
         const canvas = document.getElementById('game-canvas'); const ctx = canvas.getContext('2d');
-        const MAP_SIZE = 2000; let dx = 0, dy = 0; const speed = 400; 
-        let lastTimestamp = 0; let lastSyncTime = 0; let animationFrameId;
+        const speed = 400; let lastTimestamp = 0; let lastSyncTime = 0; let animationFrameId;
         const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
-
-        const walls = [
-            {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, 
-            {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000}, 
-            {x: 40, y: 600, w: 200, h: 40}, {x: 400, y: 40, w: 40, h: 200}, 
-            {x: 700, y: 40, w: 40, h: 200}, {x: 1260, y: 40, w: 40, h: 200}, {x: 700, y: 340, w: 450, h: 40}, 
-            {x: 1560, y: 40, w: 40, h: 200}, {x: 1760, y: 600, w: 200, h: 40}, 
-            {x: 40, y: 1300, w: 200, h: 40}, {x: 400, y: 900, w: 40, h: 300}, 
-            {x: 800, y: 800, w: 150, h: 400}, {x: 1050, y: 800, w: 150, h: 400},
-            {x: 1760, y: 1300, w: 200, h: 40}, {x: 1560, y: 900, w: 40, h: 300}, 
-            {x: 40, y: 1600, w: 200, h: 40}, {x: 400, y: 1750, w: 40, h: 210}, 
-            {x: 700, y: 1750, w: 40, h: 210}, {x: 1260, y: 1750, w: 40, h: 210}, {x: 700, y: 1600, w: 450, h: 40}, 
-            {x: 1560, y: 1750, w: 40, h: 210}, {x: 1760, y: 1600, w: 200, h: 40}, 
-            {x: 600, y: 500, w: 40, h: 100}, {x: 1360, y: 500, w: 40, h: 100}, 
-            {x: 600, y: 1400, w: 40, h: 100}, {x: 1360, y: 1400, w: 40, h: 100} 
-        ];
-        const meteors = [{x: 250, y: 250, r: 80}, {x: 1750, y: 250, r: 90}, {x: 250, y: 1000, r: 70}, {x: 1750, y: 1000, r: 70}];
-        const traps = [{x: 550, y: 350, r: 40}, {x: 1450, y: 1650, r: 50}];
-        
-        // ✨ ランダムな安全地帯の取得
-        function getRandomSafePosition() {
-            let rx, ry, safe;
-            for(let i=0; i<50; i++) {
-                rx = 100 + Math.random() * (MAP_SIZE - 200); ry = 100 + Math.random() * (MAP_SIZE - 200); safe = true;
-                walls.forEach(w => { if (rx > w.x - 20 && rx < w.x + w.w + 20 && ry > w.y - 20 && ry < w.y + w.h + 20) safe = false; });
-                if(!safe) continue;
-                traps.forEach(t => { if (Math.hypot(rx - t.x, ry - t.y) < t.r + 20) safe = false; });
-                if(!safe) continue;
-                meteors.forEach(m => { if (Math.hypot(rx - m.x, ry - m.y) < m.r + 20) safe = false; });
-                if(safe) return {x: rx, y: ry};
-            }
-            return {x: 1000, y: 500}; 
-        }
-
-        const taskPositions = [
-            [150, 150], [250, 250], [350, 450], [200, 550], [400, 200], 
-            [850, 150], [1000, 250], [1150, 150], [950, 300], [1050, 300], 
-            [1600, 150], [1750, 250], [1650, 450], [1800, 350], [1700, 200], 
-            [200, 850], [350, 950], [250, 1150], [1650, 850], [1800, 950], 
-            [850, 500], [1150, 500], [850, 1400], [1150, 1400], 
-            [200, 1700], [350, 1850], 
-            [850, 1750], [1150, 1850], 
-            [1650, 1700], [1800, 1850] 
-        ];
-        const taskStations = taskPositions.map((pos, i) => ({ x: pos[0], y: pos[1], id: 't' + (i+1), name: '修理タスク' + (i+1) }));
-        taskStations[0].name = "エンジン出力"; taskStations[5].name = "操舵システム"; 
-        taskStations[10].name = "通信アンテナ"; taskStations[15].name = "生体スキャン"; 
-        taskStations[24].name = "酸素フィルター"; taskStations[26].name = "倉庫整理"; taskStations[28].name = "シールド展開";
 
         const colors = ['#ef4444', '#3b82f6', '#22c55e', '#eab308', '#ec4899', '#a855f7', '#f97316', '#ffffff'];
         const colorPicker = document.getElementById('color-picker');
@@ -322,18 +370,18 @@
                 document.getElementById('btn-teleport').onclick = activateTeleport;
                 document.getElementById('btn-report').onclick = reportBody;
 
-                // 🔄 戻るボタンの処理分岐
                 document.getElementById('btn-return-lobby').onclick = async () => {
                     if (gameMode === 'multi') {
                         const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
                         await updateDoc(globalRef, { status: 'lobby' });
                     } else { 
-                        // ソロ戦のリセット
-                        const oldStatus = globalState.status;
-                        globalState.status = 'title'; 
-                        handleStateChange(oldStatus, 'title', globalState); 
+                        // 🔄 完全リセットしてタイトルに戻る
+                        globalState.status = 'title'; handleStateChange('finished', 'title', globalState); 
                     }
                 };
+
+                // 初期状態として適当な壁を入れておく
+                walls = PRESET_WALLS[0];
 
                 setupControls(); window.addEventListener('resize', resizeCanvas); resizeCanvas(); requestAnimationFrame(gameLoop);
             } catch (error) { showAlert('せつぞくにシッパイしました: ' + error.message); }
@@ -347,24 +395,15 @@
             gameMode = 'multi';
             const nameInput = document.getElementById('player-name-input').value.trim(); const passwordInput = document.getElementById('room-password-input').value.trim();
             if (!nameInput || !passwordInput) { showAlert('なまえと合言葉をいれてね！'); return; }
-            currentRoomId = passwordInput; me.name = nameInput; 
-            
-            // ✨ ロビー入室時にランダムな位置をセット
-            const startPos = getRandomSafePosition();
-            me.x = startPos.x; me.y = startPos.y; 
+            currentRoomId = passwordInput; me.name = nameInput; me.x = 1000; me.y = 500; 
             switchScreen('wait-screen');
 
-            // 🔄 ロビー入室時に古いプレイヤーを削除（クリーンアップ）
+            // 🧹 古い幽霊プレイヤーの削除
             try {
                 const playersCol = collection(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`);
                 const playersSnap = await getDocs(playersCol);
                 const now = Date.now();
-                playersSnap.forEach(d => {
-                    const data = d.data();
-                    if (data.lastActive && (now - data.lastActive > 30000)) {
-                        deleteDoc(d.ref); 
-                    }
-                });
+                playersSnap.forEach(d => { const data = d.data(); if (data.lastActive && (now - data.lastActive > 30000)) deleteDoc(d.ref); });
             } catch(e) { console.warn(e); }
 
             const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
@@ -444,12 +483,14 @@
             let numAliens = 1; if (playerIds.length >= 6) { numAliens = 2; }
             const selectedAlienIds = getRandomElements(playerIds, numAliens);
 
-            completedTasks = []; let crewCount = 0; stealthTimer = 0; stealthCooldown = 0; me.isDancing = false; myDanceTimer = 0; me.angle = 0; teleportCooldown = 0; 
+            completedTasks = []; stealthTimer = 0; stealthCooldown = 0; me.isDancing = false; myDanceTimer = 0; me.angle = 0; teleportCooldown = 0; 
 
-            // ✨ 各プレイヤーをランダムな位置に配置
+            // 🌟 マップの生成
+            const layout = generateMapLayout();
+
             for (let pid of playerIds) {
-                const isAlien = selectedAlienIds.includes(pid); if (!isAlien) crewCount++;
-                const safePos = getRandomSafePosition();
+                const isAlien = selectedAlienIds.includes(pid);
+                const safePos = getRandomSafePosition(); // 🌟 各プレイヤーランダムスタート
                 const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, pid);
                 await updateDoc(pRef, { role: isAlien ? 'alien' : 'crew', isAlive: true, isStealth: false, angle: 0, isDancing: false, x: safePos.x, y: safePos.y });
             }
@@ -460,7 +501,7 @@
             const dAli = await getDocs(cAli); dAli.forEach(d => deleteDoc(d.ref));
 
             const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
-            await setDoc(globalRef, { status: 'playing', alienIds: selectedAlienIds, meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: crewCount * 8, winner: null, deadBodies: [] });
+            await setDoc(globalRef, { status: 'playing', alienIds: selectedAlienIds, meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 15, winner: null, deadBodies: [], mapLayout: layout });
         }
 
         function startSoloGame() {
@@ -468,7 +509,9 @@
             const nameInput = document.getElementById('player-name-input').value.trim(); if (!nameInput) { showAlert('なまえをいれてね！'); return; }
             const diffRadios = document.getElementsByName('cpu-level'); for(let r of diffRadios){ if(r.checked) cpuLevel = r.value; }
             
-            // ✨ 自分をランダムスタート
+            // 🌟 マップの生成
+            const layout = generateMapLayout();
+            
             const mySafePos = getRandomSafePosition();
             me.name = nameInput; me.x = mySafePos.x; me.y = mySafePos.y; me.isAlive = true; completedTasks = []; me.isStealth = false;
             me.angle = 0; me.isDancing = false; myDanceTimer = 0; stealthTimer = 0; stealthCooldown = 0; teleportCooldown = 0;
@@ -478,8 +521,7 @@
             
             for (let i=0; i<3; i++) {
                 const bId = 'bot_' + i; 
-                // ✨ CPUもランダムスタート
-                const safePos = getRandomSafePosition();
+                const safePos = getRandomSafePosition(); // 🌟 各CPUランダムスタート
                 players[bId] = { name: botNames[i], color: botColors[i] || '#ffffff', x: safePos.x, y: safePos.y, isAlive: true, role: 'crew', isStealth: false, isDancing: false, angle: 0 };
                 cpuData.push({ id: bId, targetX: safePos.x, targetY: safePos.y, speed: 200, completedTasks: [], taskTarget: null, taskTimer: 0, stuckTimer: 0, stealthCooldown: 0, stealthTimer: 0, danceTimer: 0, teleportCooldown: 0 });
             }
@@ -487,16 +529,14 @@
             allIds.forEach(id => players[id].role = (id === alienId) ? 'alien' : 'crew'); me.role = players[userId].role;
             
             const oldStatus = globalState.status;
-            globalState = { status: 'playing', alienIds: [alienId], votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 24, winner: null, deadBodies: [] };
+            globalState = { status: 'playing', alienIds: [alienId], votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 15, winner: null, deadBodies: [], mapLayout: layout };
             
             document.getElementById('btn-catch').style.display = (me.role === 'alien') ? 'block' : 'none';
             document.getElementById('btn-stealth').style.display = (me.role === 'alien') ? 'block' : 'none';
             document.getElementById('btn-teleport').style.display = (me.role === 'alien') ? 'block' : 'none';
             document.getElementById('alien-chat-container').style.display = (me.role === 'alien') ? 'block' : 'none'; 
             
-            // 🔄 旧ステータスからの遷移を呼び出す
-            handleStateChange(oldStatus, 'playing', globalState); 
-            startCPUAI();
+            handleStateChange(oldStatus, 'playing', globalState); startCPUAI();
         }
 
         async function activateStealth() {
@@ -526,8 +566,7 @@
             } else {
                 globalState.status = 'meeting'; 
                 globalState.meetingCaller = me.name + ' (死体発見)'; 
-                globalState.votes = {}; globalState.lastExiled = null; globalState.exiledRole = null;
-                globalState.deadBodies = [];
+                globalState.votes = {}; globalState.lastExiled = null; globalState.exiledRole = null; globalState.deadBodies = [];
                 cpuData.forEach(cpu => {
                     const p = players[cpu.id];
                     if (p && p.isAlive) { const aliveIds = Object.keys(players).filter(id => players[id].isAlive); aliveIds.push('skip'); globalState.votes[cpu.id] = aliveIds[Math.floor(Math.random() * aliveIds.length)]; }
@@ -690,6 +729,14 @@
         function handleStateChange(oldStatus, newStatus, stateData) {
             if (oldStatus === newStatus) return;
 
+            // 🌟 プレイ開始時にマップデータを適用
+            if (newStatus === 'playing' && stateData.mapLayout) {
+                walls = PRESET_WALLS[stateData.mapLayout.mapIndex];
+                meteors = stateData.mapLayout.meteors;
+                traps = stateData.mapLayout.traps;
+                taskStations = stateData.mapLayout.taskStations;
+            }
+
             if (oldStatus === 'meeting' && newStatus === 'playing') {
                 const exiled = stateData.lastExiled; const exiledRole = stateData.exiledRole;
                 if (exiled && exiled !== '誰も') {
@@ -767,8 +814,8 @@
                 switchScreen('wait-screen'); completedTasks = []; teleportCooldown = 0;
                 document.getElementById('alien-chat-container').style.display = 'none';
             }
-            // 🔄 タイトル画面への完全リセット
             else if (newStatus === 'title') {
+                // 🔄 ソロ戦の完全リセットとタイトル画面帰還
                 switchScreen('join-screen'); 
                 completedTasks = []; teleportCooldown = 0; stealthCooldown = 0; stealthTimer = 0;
                 myDanceTimer = 0; me.isDancing = false; me.angle = 0;
@@ -1004,13 +1051,12 @@
 
                 if (gameMode === 'multi') {
                     const now = Date.now();
+                    // 🌟 5秒ごとの生存報告を追加
                     if (now - lastSyncTime > 100) {
                         if (dx !== 0 || dy !== 0 || me.isDancing) {
                             lastSyncTime = now;
                             try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { x: me.x, y: me.y, lastActive: now, isDancing: me.isDancing, angle: me.angle }); } catch(e) {}
-                        } 
-                        // 🌟 5秒ごとの定期生存報告（ハートビート）
-                        else if (now - lastSyncTime > 5000) {
+                        } else if (now - lastSyncTime > 5000) {
                             lastSyncTime = now;
                             try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { lastActive: now }); } catch(e) {}
                         }
