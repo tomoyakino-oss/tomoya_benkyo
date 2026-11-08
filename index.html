@@ -37,12 +37,6 @@
             align-items: center; justify-content: center; z-index: 50; overflow-y: auto; padding: 20px 0;
         }
         .hidden-screen { display: none !important; }
-        
-        #alien-chat-box {
-            background: rgba(88, 28, 135, 0.8); 
-            border: 2px solid #a855f7;
-            pointer-events: auto;
-        }
     </style>
 </head>
 <body>
@@ -52,7 +46,6 @@
     <!-- UIレイヤー (プレイ中) -->
     <div id="ui-layer" class="hidden-screen absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
         
-        <!-- 中央上のタスクバー -->
         <div class="absolute top-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center pointer-events-none w-[220px]">
             <div class="bg-black/50 px-4 py-1 rounded-full font-bold text-sm md:text-base whitespace-nowrap mb-1 text-white shadow">
                 あなたは: <span id="my-role-text">クルー 👨‍🚀</span>
@@ -63,7 +56,6 @@
             </div>
         </div>
 
-        <!-- 👾 エイリアン専用：秘密のチャット（左上） -->
         <div id="alien-chat-container" class="hidden absolute top-4 left-4 w-[250px] md:w-[300px] flex flex-col gap-2">
             <div class="bg-purple-900/90 border-2 border-purple-500 rounded-xl p-2 shadow-lg pointer-events-auto">
                 <p class="text-xs font-bold text-purple-300 mb-1">👾 秘密の通信（クルーには見えません）</p>
@@ -75,7 +67,6 @@
             </div>
         </div>
         
-        <!-- 十字キー -->
         <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 pointer-events-auto flex flex-col items-center gap-1 md:gap-2">
             <button class="dpad-btn" id="btn-up">🔼</button>
             <div class="flex gap-1 md:gap-2">
@@ -86,9 +77,7 @@
             <button class="dpad-btn" id="btn-down">🔽</button>
         </div>
         
-        <!-- 右下のアクションボタン群 -->
-        <div class="absolute bottom-4 right-4 md:bottom-8 md:right-8 pointer-events-auto flex flex-col items-end gap-2">
-            <!-- 📢 通報ボタンを追加 -->
+        <div class="absolute bottom-4 right-4 md:bottom-8 md:right-8 pointer-events-auto flex flex-col items-end gap-2 md:gap-3">
             <button id="btn-report" class="hidden bg-orange-500 border-4 border-orange-700 text-white font-bold py-2 px-3 md:py-3 md:px-5 rounded-full shadow-lg text-sm md:text-lg transform transition active:scale-95">
                 📢 通報
             </button>
@@ -164,7 +153,7 @@
             <p id="victory-desc" class="text-xl md:text-2xl text-white font-bold drop-shadow-md whitespace-pre-wrap"></p>
         </div>
         <button id="btn-return-lobby" class="bg-blue-600 hover:bg-blue-500 text-white font-bold py-3 px-8 rounded-full text-xl shadow-lg border-b-4 border-blue-800 transition-all active:scale-95">
-            ロビーにもどる
+            タイトルにもどる
         </button>
     </div>
 
@@ -232,9 +221,8 @@
         let me = { name: '', color: '#ef4444', x: 1000, y: 500, isAlive: true, role: 'crew', isStealth: false, angle: 0, isDancing: false };
         let players = {};
         
-        // 🦴 deadBodies を追加
         let globalState = { status: 'lobby', alienIds: [], meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 1, winner: null, deadBodies: [] };
-        let gameMode = 'multi'; 
+        let gameMode = 'none'; 
         
         let cpuLevel = 'easy'; let cpuTimer = null; let cpuData = []; 
         let completedTasks = []; 
@@ -268,6 +256,7 @@
         const meteors = [{x: 250, y: 250, r: 80}, {x: 1750, y: 250, r: 90}, {x: 250, y: 1000, r: 70}, {x: 1750, y: 1000, r: 70}];
         const traps = [{x: 550, y: 350, r: 40}, {x: 1450, y: 1650, r: 50}];
         
+        // ✨ ランダムな安全地帯の取得
         function getRandomSafePosition() {
             let rx, ry, safe;
             for(let i=0; i<50; i++) {
@@ -331,14 +320,19 @@
                 document.getElementById('btn-stealth').onclick = activateStealth;
                 document.getElementById('btn-dance').onclick = startDancing;
                 document.getElementById('btn-teleport').onclick = activateTeleport;
-                // 📢 通報ボタンの登録
                 document.getElementById('btn-report').onclick = reportBody;
 
+                // 🔄 戻るボタンの処理分岐
                 document.getElementById('btn-return-lobby').onclick = async () => {
                     if (gameMode === 'multi') {
                         const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
                         await updateDoc(globalRef, { status: 'lobby' });
-                    } else { globalState.status = 'lobby'; handleStateChange('finished', 'lobby', globalState); }
+                    } else { 
+                        // ソロ戦のリセット
+                        const oldStatus = globalState.status;
+                        globalState.status = 'title'; 
+                        handleStateChange(oldStatus, 'title', globalState); 
+                    }
                 };
 
                 setupControls(); window.addEventListener('resize', resizeCanvas); resizeCanvas(); requestAnimationFrame(gameLoop);
@@ -353,10 +347,28 @@
             gameMode = 'multi';
             const nameInput = document.getElementById('player-name-input').value.trim(); const passwordInput = document.getElementById('room-password-input').value.trim();
             if (!nameInput || !passwordInput) { showAlert('なまえと合言葉をいれてね！'); return; }
-            currentRoomId = passwordInput; me.name = nameInput; me.x = 1000; me.y = 500; 
+            currentRoomId = passwordInput; me.name = nameInput; 
+            
+            // ✨ ロビー入室時にランダムな位置をセット
+            const startPos = getRandomSafePosition();
+            me.x = startPos.x; me.y = startPos.y; 
             switchScreen('wait-screen');
+
+            // 🔄 ロビー入室時に古いプレイヤーを削除（クリーンアップ）
+            try {
+                const playersCol = collection(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`);
+                const playersSnap = await getDocs(playersCol);
+                const now = Date.now();
+                playersSnap.forEach(d => {
+                    const data = d.data();
+                    if (data.lastActive && (now - data.lastActive > 30000)) {
+                        deleteDoc(d.ref); 
+                    }
+                });
+            } catch(e) { console.warn(e); }
+
             const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
-            await setDoc(playerRef, { name: me.name, color: me.color, x: me.x, y: me.y, isAlive: true, role: 'crew', isStealth: false, angle: 0, isDancing: false });
+            await setDoc(playerRef, { name: me.name, color: me.color, x: me.x, y: me.y, isAlive: true, role: 'crew', isStealth: false, angle: 0, isDancing: false, lastActive: Date.now() });
             startListening();
         }
 
@@ -434,10 +446,12 @@
 
             completedTasks = []; let crewCount = 0; stealthTimer = 0; stealthCooldown = 0; me.isDancing = false; myDanceTimer = 0; me.angle = 0; teleportCooldown = 0; 
 
+            // ✨ 各プレイヤーをランダムな位置に配置
             for (let pid of playerIds) {
                 const isAlien = selectedAlienIds.includes(pid); if (!isAlien) crewCount++;
+                const safePos = getRandomSafePosition();
                 const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, pid);
-                await updateDoc(pRef, { role: isAlien ? 'alien' : 'crew', isAlive: true, isStealth: false, angle: 0, isDancing: false, x: 1000 + (Math.random()-0.5)*100, y: 500 + (Math.random()-0.5)*100 });
+                await updateDoc(pRef, { role: isAlien ? 'alien' : 'crew', isAlive: true, isStealth: false, angle: 0, isDancing: false, x: safePos.x, y: safePos.y });
             }
             
             const cPub = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
@@ -446,7 +460,6 @@
             const dAli = await getDocs(cAli); dAli.forEach(d => deleteDoc(d.ref));
 
             const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
-            // 🦴 deadBodies の初期化
             await setDoc(globalRef, { status: 'playing', alienIds: selectedAlienIds, meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: crewCount * 8, winner: null, deadBodies: [] });
         }
 
@@ -455,21 +468,25 @@
             const nameInput = document.getElementById('player-name-input').value.trim(); if (!nameInput) { showAlert('なまえをいれてね！'); return; }
             const diffRadios = document.getElementsByName('cpu-level'); for(let r of diffRadios){ if(r.checked) cpuLevel = r.value; }
             
-            me.name = nameInput; me.x = 1000; me.y = 500; me.isAlive = true; completedTasks = []; me.isStealth = false;
+            // ✨ 自分をランダムスタート
+            const mySafePos = getRandomSafePosition();
+            me.name = nameInput; me.x = mySafePos.x; me.y = mySafePos.y; me.isAlive = true; completedTasks = []; me.isStealth = false;
             me.angle = 0; me.isDancing = false; myDanceTimer = 0; stealthTimer = 0; stealthCooldown = 0; teleportCooldown = 0;
             
             const botNames = ['ロボ1', 'ロボ2', 'ロボ3']; const botColors = ['#3b82f6', '#22c55e', '#eab308'].filter(c => c !== me.color);
             players = {}; players[userId] = me; cpuData = [];
             
             for (let i=0; i<3; i++) {
-                const bId = 'bot_' + i; const bx = 1000 + (Math.random()-0.5)*100; const by = 500 + (Math.random()-0.5)*100;
-                players[bId] = { name: botNames[i], color: botColors[i] || '#ffffff', x: bx, y: by, isAlive: true, role: 'crew', isStealth: false, isDancing: false, angle: 0 };
-                cpuData.push({ id: bId, targetX: bx, targetY: by, speed: 200, completedTasks: [], taskTarget: null, taskTimer: 0, stuckTimer: 0, stealthCooldown: 0, stealthTimer: 0, danceTimer: 0, teleportCooldown: 0 });
+                const bId = 'bot_' + i; 
+                // ✨ CPUもランダムスタート
+                const safePos = getRandomSafePosition();
+                players[bId] = { name: botNames[i], color: botColors[i] || '#ffffff', x: safePos.x, y: safePos.y, isAlive: true, role: 'crew', isStealth: false, isDancing: false, angle: 0 };
+                cpuData.push({ id: bId, targetX: safePos.x, targetY: safePos.y, speed: 200, completedTasks: [], taskTarget: null, taskTimer: 0, stuckTimer: 0, stealthCooldown: 0, stealthTimer: 0, danceTimer: 0, teleportCooldown: 0 });
             }
             const allIds = Object.keys(players); const alienId = allIds[Math.floor(Math.random() * allIds.length)];
             allIds.forEach(id => players[id].role = (id === alienId) ? 'alien' : 'crew'); me.role = players[userId].role;
             
-            // 🦴 deadBodies の初期化
+            const oldStatus = globalState.status;
             globalState = { status: 'playing', alienIds: [alienId], votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 24, winner: null, deadBodies: [] };
             
             document.getElementById('btn-catch').style.display = (me.role === 'alien') ? 'block' : 'none';
@@ -477,7 +494,9 @@
             document.getElementById('btn-teleport').style.display = (me.role === 'alien') ? 'block' : 'none';
             document.getElementById('alien-chat-container').style.display = (me.role === 'alien') ? 'block' : 'none'; 
             
-            handleStateChange('lobby', 'playing', globalState); startCPUAI();
+            // 🔄 旧ステータスからの遷移を呼び出す
+            handleStateChange(oldStatus, 'playing', globalState); 
+            startCPUAI();
         }
 
         async function activateStealth() {
@@ -499,7 +518,6 @@
             if (gameMode === 'multi') { try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); await updateDoc(pRef, { isDancing: true }); } catch(e){} }
         }
 
-        // 📢 死体の通報アクション
         async function reportBody() {
             if (!me.isAlive) return;
             if (gameMode === 'multi') {
@@ -538,7 +556,6 @@
                     if (!p.isAlive) { cpu.targetX = p.x + (Math.random() - 0.5) * 800; cpu.targetY = p.y + (Math.random() - 0.5) * 800; cpu.speed = aiSpeed * 1.5; return; }
                     if (cpu.teleportCooldown > 0) cpu.teleportCooldown -= dtCPU;
 
-                    // 📢 CPUの死体発見通報
                     if (globalState.deadBodies && globalState.deadBodies.length > 0) {
                         let nearDeadBody = false;
                         globalState.deadBodies.forEach(b => { if (Math.hypot(p.x - b.x, p.y - b.y) < 120) nearDeadBody = true; });
@@ -573,7 +590,6 @@
                             
                             if (minDist < catchDist) {
                                 closestCrew.isAlive = false; 
-                                // 🦴 死体を追加
                                 globalState.deadBodies = [...(globalState.deadBodies || []), { id: closestCrewId, x: closestCrew.x, y: closestCrew.y, color: closestCrew.color }];
                                 if (closestCrew === me) { me.isAlive = false; killMeFirebaseSync(); }
                                 checkWinConditionSolo(); 
@@ -686,6 +702,8 @@
                 switchScreen('victory-screen');
                 const title = document.getElementById('victory-title'); const desc = document.getElementById('victory-desc');
                 
+                document.getElementById('btn-return-lobby').innerText = (gameMode === 'multi') ? 'ロビーにもどる' : 'タイトルにもどる';
+                
                 let exiledText = '';
                 if (oldStatus === 'meeting' || stateData.lastExiled) {
                     if (stateData.lastExiled && stateData.lastExiled !== '誰も') {
@@ -746,8 +764,17 @@
                 switchScreen('meeting-screen'); renderVoteButtons();
             } 
             else if (newStatus === 'lobby') {
-                switchScreen('wait-screen'); completedTasks = []; me.x = 1000; me.y = 500; teleportCooldown = 0;
+                switchScreen('wait-screen'); completedTasks = []; teleportCooldown = 0;
                 document.getElementById('alien-chat-container').style.display = 'none';
+            }
+            // 🔄 タイトル画面への完全リセット
+            else if (newStatus === 'title') {
+                switchScreen('join-screen'); 
+                completedTasks = []; teleportCooldown = 0; stealthCooldown = 0; stealthTimer = 0;
+                myDanceTimer = 0; me.isDancing = false; me.angle = 0;
+                document.getElementById('alien-chat-container').style.display = 'none';
+                if (cpuTimer) clearInterval(cpuTimer);
+                gameMode = 'none'; 
             }
         }
 
@@ -792,7 +819,6 @@
                 if (gameMode === 'multi') {
                     const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, closestId); await updateDoc(pRef, { isAlive: false });
                     
-                    // 🦴 オンラインでの死体追加
                     const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
                     const newBodies = [...(globalState.deadBodies || []), { id: closestId, x: players[closestId].x, y: players[closestId].y, color: players[closestId].color }];
                     await updateDoc(globalRef, { deadBodies: newBodies });
@@ -800,7 +826,6 @@
                     players[closestId].isAlive = false; checkWinConditionMulti(globalState.completedTaskCount || 0, globalState.totalTaskCount);
                 } else { 
                     players[closestId].isAlive = false; 
-                    // 🦴 ソロでの死体追加
                     globalState.deadBodies = [...(globalState.deadBodies || []), { id: closestId, x: players[closestId].x, y: players[closestId].y, color: players[closestId].color }];
                     checkWinConditionSolo(); 
                 }
@@ -930,7 +955,6 @@
                 
                 document.getElementById('task-bar-fill').style.width = (globalState.taskProgress || 0) + '%';
                 
-                // 📢 通報ボタンのUI更新
                 let nearBody = false;
                 if (me.isAlive && globalState.deadBodies && globalState.deadBodies.length > 0) {
                     globalState.deadBodies.forEach(b => { if (Math.hypot(me.x - b.x, me.y - b.y) < 120) nearBody = true; });
@@ -976,13 +1000,20 @@
 
                 const wasAlive = me.isAlive; resolveCollisions(me, 20); 
                 if (wasAlive) checkTraps(me);
-                if (wasAlive && !me.isAlive) { killMeFirebaseSync(false); if (gameMode === 'solo') checkWinConditionSolo(); }
+                if (wasAlive && !me.isAlive) { killMeFirebaseSync(); if (gameMode === 'solo') checkWinConditionSolo(); }
 
                 if (gameMode === 'multi') {
                     const now = Date.now();
-                    if (now - lastSyncTime > 100 && (dx !== 0 || dy !== 0 || me.isDancing)) {
-                        lastSyncTime = now;
-                        try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { x: me.x, y: me.y, lastActive: now, isDancing: me.isDancing, angle: me.angle }); } catch(e) {}
+                    if (now - lastSyncTime > 100) {
+                        if (dx !== 0 || dy !== 0 || me.isDancing) {
+                            lastSyncTime = now;
+                            try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { x: me.x, y: me.y, lastActive: now, isDancing: me.isDancing, angle: me.angle }); } catch(e) {}
+                        } 
+                        // 🌟 5秒ごとの定期生存報告（ハートビート）
+                        else if (now - lastSyncTime > 5000) {
+                            lastSyncTime = now;
+                            try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { lastActive: now }); } catch(e) {}
+                        }
                     }
                 }
 
@@ -1028,7 +1059,6 @@
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 2;
             for (let i = 0; i <= MAP_SIZE; i += 100) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke(); }
 
-            // 🦴 死体の描画
             if (globalState.deadBodies && globalState.deadBodies.length > 0) {
                 const visionRadius = (me.role === 'alien') ? VISION_RADIUS_ALIEN : VISION_RADIUS_CREW;
                 globalState.deadBodies.forEach(b => {
