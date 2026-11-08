@@ -18,7 +18,17 @@
             border-radius: 12px; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
             font-size: 20px; touch-action: none;
         }
-        @media (min-width: 768px) { .dpad-btn { border-radius: 16px; width: 60px; height: 60px; font-size: 24px; } }
+        .dpad-center {
+            background: rgba(236, 72, 153, 0.4); border: 2px solid rgba(236, 72, 153, 0.6);
+            border-radius: 50%; width: 50px; height: 50px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; touch-action: none; cursor: pointer;
+        }
+        .dpad-center:active { background: rgba(236, 72, 153, 0.8); transform: scale(0.9); }
+        
+        @media (min-width: 768px) { 
+            .dpad-btn { border-radius: 16px; width: 60px; height: 60px; font-size: 24px; } 
+            .dpad-center { width: 60px; height: 60px; font-size: 28px; }
+        }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         .screen-overlay {
@@ -27,6 +37,12 @@
             align-items: center; justify-content: center; z-index: 50; overflow-y: auto; padding: 20px 0;
         }
         .hidden-screen { display: none !important; }
+        
+        #alien-chat-box {
+            background: rgba(88, 28, 135, 0.8); 
+            border: 2px solid #a855f7;
+            pointer-events: auto;
+        }
     </style>
 </head>
 <body>
@@ -35,6 +51,8 @@
 
     <!-- UIレイヤー (プレイ中) -->
     <div id="ui-layer" class="hidden-screen absolute top-0 left-0 w-full h-full pointer-events-none overflow-hidden">
+        
+        <!-- 中央上のタスクバー -->
         <div class="absolute top-4 left-1/2 transform -translate-x-1/2 flex flex-col items-center pointer-events-none w-[220px]">
             <div class="bg-black/50 px-4 py-1 rounded-full font-bold text-sm md:text-base whitespace-nowrap mb-1 text-white shadow">
                 あなたは: <span id="my-role-text">クルー 👨‍🚀</span>
@@ -44,25 +62,49 @@
                 <p class="absolute inset-0 text-[10px] md:text-xs font-bold text-white flex items-center justify-center mix-blend-difference">タスク進行度</p>
             </div>
         </div>
+
+        <!-- 👾 エイリアン専用：秘密のチャット（左上） -->
+        <div id="alien-chat-container" class="hidden absolute top-4 left-4 w-[250px] md:w-[300px] flex flex-col gap-2">
+            <div class="bg-purple-900/90 border-2 border-purple-500 rounded-xl p-2 shadow-lg pointer-events-auto">
+                <p class="text-xs font-bold text-purple-300 mb-1">👾 秘密の通信（クルーには見えません）</p>
+                <div id="alien-chat-messages-play" class="h-[100px] overflow-y-auto no-scrollbar flex flex-col gap-1 mb-2"></div>
+                <div class="flex gap-1">
+                    <input type="text" id="alien-chat-input-play" placeholder="作戦を伝える..." maxlength="30" class="flex-grow text-black px-2 py-1 rounded text-sm focus:outline-none focus:ring-2 focus:ring-purple-400">
+                    <button id="btn-send-alien-chat-play" class="bg-purple-600 hover:bg-purple-500 text-white font-bold py-1 px-3 rounded text-sm transition-all">送信</button>
+                </div>
+            </div>
+        </div>
         
+        <!-- 十字キー -->
         <div class="absolute bottom-4 left-4 md:bottom-8 md:left-8 pointer-events-auto flex flex-col items-center gap-1 md:gap-2">
             <button class="dpad-btn" id="btn-up">🔼</button>
             <div class="flex gap-1 md:gap-2">
                 <button class="dpad-btn" id="btn-left">◀️</button>
-                <div class="w-[50px] md:w-[60px]"></div>
+                <button class="dpad-center" id="btn-dance" title="おどる (Space)">💃</button>
                 <button class="dpad-btn" id="btn-right">▶️</button>
             </div>
             <button class="dpad-btn" id="btn-down">🔽</button>
         </div>
         
-        <div class="absolute bottom-4 right-4 md:bottom-8 md:right-8 pointer-events-auto flex flex-col items-end gap-2 md:gap-4">
-            <button id="btn-task" class="hidden bg-blue-500 border-4 border-blue-700 text-white font-bold py-3 px-4 md:py-4 md:px-6 rounded-full shadow-lg text-sm md:text-xl transform transition active:scale-95">
+        <!-- 右下のアクションボタン群 -->
+        <div class="absolute bottom-4 right-4 md:bottom-8 md:right-8 pointer-events-auto flex flex-col items-end gap-2">
+            <!-- 📢 通報ボタンを追加 -->
+            <button id="btn-report" class="hidden bg-orange-500 border-4 border-orange-700 text-white font-bold py-2 px-3 md:py-3 md:px-5 rounded-full shadow-lg text-sm md:text-lg transform transition active:scale-95">
+                📢 通報
+            </button>
+            <button id="btn-task" class="hidden bg-blue-500 border-4 border-blue-700 text-white font-bold py-2 px-3 md:py-3 md:px-5 rounded-full shadow-lg text-sm md:text-lg transform transition active:scale-95">
                 🛠️ タスク
             </button>
-            <button id="btn-catch" class="hidden bg-red-600 border-4 border-red-800 text-white font-bold py-3 px-4 md:py-4 md:px-6 rounded-full shadow-lg text-sm md:text-xl transform transition active:scale-95">
+            <button id="btn-teleport" class="hidden bg-cyan-500 border-4 border-cyan-700 text-white font-bold py-2 px-3 md:py-3 md:px-5 rounded-full shadow-lg text-sm md:text-lg transform transition active:scale-95">
+                ✨ テレポート
+            </button>
+            <button id="btn-stealth" class="hidden bg-purple-600 border-4 border-purple-800 text-white font-bold py-2 px-3 md:py-3 md:px-5 rounded-full shadow-lg text-sm md:text-lg transform transition active:scale-95">
+                👻 ステルス
+            </button>
+            <button id="btn-catch" class="hidden bg-red-600 border-4 border-red-800 text-white font-bold py-2 px-3 md:py-3 md:px-5 rounded-full shadow-lg text-sm md:text-lg transform transition active:scale-95">
                 👾 つかまえる
             </button>
-            <button id="btn-meeting" class="bg-yellow-400 border-4 border-yellow-600 text-black font-bold py-3 px-4 md:py-4 md:px-6 rounded-full shadow-lg text-sm md:text-xl transform transition active:scale-95">
+            <button id="btn-meeting" class="bg-yellow-400 border-4 border-yellow-600 text-black font-bold py-2 px-3 md:py-3 md:px-5 rounded-full shadow-lg text-sm md:text-lg transform transition active:scale-95">
                 🚨 きんきゅうかいぎ
             </button>
         </div>
@@ -128,27 +170,42 @@
 
     <!-- 会議画面 -->
     <div id="meeting-screen" class="screen-overlay hidden-screen">
-        <div class="bg-indigo-900 p-4 rounded-3xl border-4 border-yellow-500 shadow-2xl max-w-md w-[95%] h-[90vh] md:h-[80vh] flex flex-col my-auto flex-shrink-0">
+        <div class="bg-indigo-900 p-4 rounded-3xl border-4 border-yellow-500 shadow-2xl max-w-md w-[95%] h-[95vh] md:h-[85vh] flex flex-col my-auto flex-shrink-0">
             <h2 class="text-xl md:text-2xl font-bold text-center text-yellow-400 mb-2">🚨 きんきゅうかいぎ 🚨</h2>
             <p class="text-center text-xs md:text-sm mb-2" id="meeting-desc">エイリアンはだれだ！？</p>
-            <div id="vote-section" class="bg-indigo-950 p-3 rounded-xl mb-3 shrink-0 border-2 border-indigo-700">
-                <p class="text-sm font-bold text-center mb-2 text-yellow-200">👇 追放する人を選んで投票！</p>
-                <div id="vote-list" class="flex flex-wrap gap-2 justify-center"></div>
-                <p id="my-vote-status" class="text-center text-xs text-white mt-2 font-bold bg-black/40 py-1 rounded-full">まだ投票していません</p>
+            
+            <div id="vote-section" class="bg-indigo-950 p-2 rounded-xl mb-2 shrink-0 border-2 border-indigo-700">
+                <p class="text-xs font-bold text-center mb-1 text-yellow-200">👇 追放する人を選んで投票！</p>
+                <div id="vote-list" class="flex flex-wrap gap-1 justify-center"></div>
+                <p id="my-vote-status" class="text-center text-[10px] text-white mt-1 font-bold bg-black/40 py-1 rounded-full">まだ投票していません</p>
             </div>
-            <div id="chat-messages" class="flex-grow bg-indigo-950 rounded-xl p-4 overflow-y-auto no-scrollbar mb-4 flex flex-col gap-2"></div>
-            <div class="flex gap-2 mb-4 shrink-0">
-                <input type="text" id="chat-input" placeholder="メッセージ..." maxlength="30" class="flex-grow text-black px-4 py-2 rounded-xl text-base md:text-lg focus:outline-none">
-                <button id="btn-send-chat" class="bg-green-500 text-white font-bold py-2 px-4 rounded-xl text-sm md:text-base">そうしん</button>
+
+            <p class="text-xs font-bold text-blue-300 px-2">💬 全員チャット</p>
+            <div id="chat-messages" class="h-[120px] bg-indigo-950 rounded-xl p-2 overflow-y-auto no-scrollbar mb-2 flex flex-col gap-1 border-2 border-indigo-700"></div>
+            
+            <div id="alien-meeting-chat-area" class="hidden flex-col h-[100px] mb-2">
+                <p class="text-xs font-bold text-purple-300 px-2">👾 秘密の通信（味方のみ）</p>
+                <div id="alien-chat-messages-meeting" class="flex-grow bg-purple-900/50 rounded-xl p-2 overflow-y-auto no-scrollbar flex flex-col gap-1 border-2 border-purple-500"></div>
             </div>
-            <button id="btn-end-meeting" class="w-full bg-red-500 hover:bg-red-400 border-b-4 border-red-700 text-white font-bold py-3 px-6 rounded-xl text-base md:text-lg transition-all shrink-0">かいぎをおわる（追放けってい）</button>
+
+            <div class="flex gap-2 mb-3 shrink-0 flex-col md:flex-row">
+                <div class="flex gap-1 flex-grow">
+                    <input type="text" id="chat-input" placeholder="全員に送信..." maxlength="30" class="flex-grow text-black px-2 py-2 rounded-lg text-sm focus:outline-none">
+                    <button id="btn-send-chat" class="bg-green-500 hover:bg-green-400 text-white font-bold py-2 px-3 rounded-lg text-sm shrink-0">送信</button>
+                </div>
+                <button id="btn-send-alien-chat-meeting" class="hidden bg-purple-600 hover:bg-purple-500 text-white font-bold py-2 px-3 rounded-lg text-sm shrink-0 whitespace-nowrap">
+                    👾 秘密で送信
+                </button>
+            </div>
+
+            <button id="btn-end-meeting" class="w-full bg-red-500 hover:bg-red-400 border-b-4 border-red-700 text-white font-bold py-2 md:py-3 px-6 rounded-xl text-sm md:text-base transition-all shrink-0">かいぎをおわる（追放けってい）</button>
         </div>
     </div>
 
     <!-- アラート -->
     <div id="alert-modal" class="screen-overlay hidden-screen z-[100]">
         <div class="bg-gray-800 p-6 rounded-2xl border-2 border-gray-600 text-center max-w-xs my-auto">
-            <p id="alert-text" class="text-base md:text-lg font-bold mb-4 whitespace-pre-wrap"></p>
+            <p id="alert-text" class="text-base md:text-lg font-bold mb-4 whitespace-pre-wrap leading-relaxed"></p>
             <button id="btn-alert-ok" class="bg-blue-500 hover:bg-blue-400 text-white font-bold py-2 px-8 rounded-xl transition-all">OK</button>
         </div>
     </div>
@@ -156,7 +213,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, updateDoc, onSnapshot, collection, addDoc, getDocs, deleteDoc, query, orderBy } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         const firebaseConfig = {
             apiKey: "AIzaSyA2vkuVnAT-MLUUaUlNOswabp5mbUC-teU",
@@ -172,60 +229,71 @@
         const appId = 'spaceship-panic';
         let auth, db, userId, currentRoomId;
         
-        // 初期位置を上の廊下（中央付近）に設定
-        let me = { name: '', color: '#ef4444', x: 1000, y: 500, isAlive: true, role: 'crew' };
+        let me = { name: '', color: '#ef4444', x: 1000, y: 500, isAlive: true, role: 'crew', isStealth: false, angle: 0, isDancing: false };
         let players = {};
-        let globalState = { status: 'lobby', alienId: null, meetingCaller: null, votes: {}, lastExiled: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 1, winner: null };
+        
+        // 🦴 deadBodies を追加
+        let globalState = { status: 'lobby', alienIds: [], meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 1, winner: null, deadBodies: [] };
         let gameMode = 'multi'; 
         
         let cpuLevel = 'easy'; let cpuTimer = null; let cpuData = []; 
         let completedTasks = []; 
+        let stealthTimer = 0; let stealthCooldown = 0;
+        let myDanceTimer = 0; 
+        let teleportCooldown = 0;
+        
+        const VISION_RADIUS_CREW = 350;
+        const VISION_RADIUS_ALIEN = 500;
 
         const canvas = document.getElementById('game-canvas'); const ctx = canvas.getContext('2d');
         const MAP_SIZE = 2000; let dx = 0, dy = 0; const speed = 400; 
         let lastTimestamp = 0; let lastSyncTime = 0; let animationFrameId;
         const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowDown: false, ArrowLeft: false, ArrowRight: false };
 
-        // 🧱 宇宙船の部屋と通路を構成する「壁」の定義
         const walls = [
-            {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, // 外壁 上下
-            {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000}, // 外壁 左右
-            
-            {x: 40, y: 600, w: 400, h: 40}, {x: 400, y: 40, w: 40, h: 300}, // 左上部屋
-            {x: 700, y: 40, w: 40, h: 300}, {x: 1260, y: 40, w: 40, h: 300}, {x: 700, y: 340, w: 600, h: 40}, // 中央上部屋
-            {x: 1560, y: 40, w: 40, h: 300}, {x: 1560, y: 600, w: 400, h: 40}, // 右上部屋
-            
-            {x: 40, y: 1300, w: 400, h: 40}, {x: 400, y: 800, w: 40, h: 540}, // 左中部屋
-            {x: 800, y: 800, w: 400, h: 400}, // 中央の巨大コア（リアクター）
-            {x: 1560, y: 1300, w: 400, h: 40}, {x: 1560, y: 800, w: 40, h: 540}, // 右中部屋
-            
-            {x: 40, y: 1600, w: 400, h: 40}, {x: 400, y: 1600, w: 40, h: 360}, // 左下部屋
-            {x: 700, y: 1600, w: 40, h: 360}, {x: 1260, y: 1600, w: 40, h: 360}, {x: 700, y: 1600, w: 600, h: 40}, // 中央下部屋
-            {x: 1560, y: 1600, w: 40, h: 360}, {x: 1560, y: 1600, w: 400, h: 40}, // 右下部屋
-            
-            {x: 600, y: 500, w: 40, h: 200}, {x: 1360, y: 500, w: 40, h: 200}, // 廊下の遮蔽物 上
-            {x: 600, y: 1300, w: 40, h: 200}, {x: 1360, y: 1300, w: 40, h: 200} // 廊下の遮蔽物 下
+            {x: 0, y: 0, w: 2000, h: 40}, {x: 0, y: 1960, w: 2000, h: 40}, 
+            {x: 0, y: 0, w: 40, h: 2000}, {x: 1960, y: 0, w: 40, h: 2000}, 
+            {x: 40, y: 600, w: 200, h: 40}, {x: 400, y: 40, w: 40, h: 200}, 
+            {x: 700, y: 40, w: 40, h: 200}, {x: 1260, y: 40, w: 40, h: 200}, {x: 700, y: 340, w: 450, h: 40}, 
+            {x: 1560, y: 40, w: 40, h: 200}, {x: 1760, y: 600, w: 200, h: 40}, 
+            {x: 40, y: 1300, w: 200, h: 40}, {x: 400, y: 900, w: 40, h: 300}, 
+            {x: 800, y: 800, w: 150, h: 400}, {x: 1050, y: 800, w: 150, h: 400},
+            {x: 1760, y: 1300, w: 200, h: 40}, {x: 1560, y: 900, w: 40, h: 300}, 
+            {x: 40, y: 1600, w: 200, h: 40}, {x: 400, y: 1750, w: 40, h: 210}, 
+            {x: 700, y: 1750, w: 40, h: 210}, {x: 1260, y: 1750, w: 40, h: 210}, {x: 700, y: 1600, w: 450, h: 40}, 
+            {x: 1560, y: 1750, w: 40, h: 210}, {x: 1760, y: 1600, w: 200, h: 40}, 
+            {x: 600, y: 500, w: 40, h: 100}, {x: 1360, y: 500, w: 40, h: 100}, 
+            {x: 600, y: 1400, w: 40, h: 100}, {x: 1360, y: 1400, w: 40, h: 100} 
         ];
-
-        // トラップと隕石を少し調整して廊下や大きな部屋に配置
         const meteors = [{x: 250, y: 250, r: 80}, {x: 1750, y: 250, r: 90}, {x: 250, y: 1000, r: 70}, {x: 1750, y: 1000, r: 70}];
         const traps = [{x: 550, y: 350, r: 40}, {x: 1450, y: 1650, r: 50}];
         
-        // 🛠️ 宇宙船全体に30個のタスクをまんべんなく配置
+        function getRandomSafePosition() {
+            let rx, ry, safe;
+            for(let i=0; i<50; i++) {
+                rx = 100 + Math.random() * (MAP_SIZE - 200); ry = 100 + Math.random() * (MAP_SIZE - 200); safe = true;
+                walls.forEach(w => { if (rx > w.x - 20 && rx < w.x + w.w + 20 && ry > w.y - 20 && ry < w.y + w.h + 20) safe = false; });
+                if(!safe) continue;
+                traps.forEach(t => { if (Math.hypot(rx - t.x, ry - t.y) < t.r + 20) safe = false; });
+                if(!safe) continue;
+                meteors.forEach(m => { if (Math.hypot(rx - m.x, ry - m.y) < m.r + 20) safe = false; });
+                if(safe) return {x: rx, y: ry};
+            }
+            return {x: 1000, y: 500}; 
+        }
+
         const taskPositions = [
-            [150, 150], [250, 250], [350, 450], [200, 550], [400, 200], // 左上
-            [850, 150], [1000, 250], [1150, 150], [950, 300], [1050, 300], // 中央上
-            [1600, 150], [1750, 250], [1650, 450], [1800, 350], [1700, 200], // 右上
-            [200, 850], [350, 950], [250, 1150], [1650, 850], [1800, 950], // 左中/右中
-            [850, 500], [1150, 500], [850, 1400], [1150, 1400], // 廊下
-            [200, 1700], [350, 1850], // 左下
-            [850, 1750], [1150, 1850], // 中央下
-            [1650, 1700], [1800, 1850] // 右下
+            [150, 150], [250, 250], [350, 450], [200, 550], [400, 200], 
+            [850, 150], [1000, 250], [1150, 150], [950, 300], [1050, 300], 
+            [1600, 150], [1750, 250], [1650, 450], [1800, 350], [1700, 200], 
+            [200, 850], [350, 950], [250, 1150], [1650, 850], [1800, 950], 
+            [850, 500], [1150, 500], [850, 1400], [1150, 1400], 
+            [200, 1700], [350, 1850], 
+            [850, 1750], [1150, 1850], 
+            [1650, 1700], [1800, 1850] 
         ];
-        const taskStations = taskPositions.map((pos, i) => ({
-            x: pos[0], y: pos[1], id: 't' + (i+1), name: '修理タスク' + (i+1)
-        }));
-        taskStations[0].name = "エンジン出力調整"; taskStations[5].name = "操舵システム"; 
+        const taskStations = taskPositions.map((pos, i) => ({ x: pos[0], y: pos[1], id: 't' + (i+1), name: '修理タスク' + (i+1) }));
+        taskStations[0].name = "エンジン出力"; taskStations[5].name = "操舵システム"; 
         taskStations[10].name = "通信アンテナ"; taskStations[15].name = "生体スキャン"; 
         taskStations[24].name = "酸素フィルター"; taskStations[26].name = "倉庫整理"; taskStations[28].name = "シールド展開";
 
@@ -253,9 +321,19 @@
                 
                 document.getElementById('btn-multi').onclick = joinMultiGame; document.getElementById('btn-solo').onclick = startSoloGame;
                 document.getElementById('btn-start-multi').onclick = startFirebaseGame; document.getElementById('btn-meeting').onclick = callMeeting;
-                document.getElementById('btn-end-meeting').onclick = endMeeting; document.getElementById('btn-send-chat').onclick = sendChat;
-                document.getElementById('btn-catch').onclick = catchCrew;
+                document.getElementById('btn-end-meeting').onclick = endMeeting; 
                 
+                document.getElementById('btn-send-chat').onclick = () => sendChat('public');
+                document.getElementById('btn-send-alien-chat-play').onclick = () => sendChat('alien', 'play');
+                document.getElementById('btn-send-alien-chat-meeting').onclick = () => sendChat('alien', 'meeting');
+                
+                document.getElementById('btn-catch').onclick = catchCrew;
+                document.getElementById('btn-stealth').onclick = activateStealth;
+                document.getElementById('btn-dance').onclick = startDancing;
+                document.getElementById('btn-teleport').onclick = activateTeleport;
+                // 📢 通報ボタンの登録
+                document.getElementById('btn-report').onclick = reportBody;
+
                 document.getElementById('btn-return-lobby').onclick = async () => {
                     if (gameMode === 'multi') {
                         const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
@@ -278,7 +356,7 @@
             currentRoomId = passwordInput; me.name = nameInput; me.x = 1000; me.y = 500; 
             switchScreen('wait-screen');
             const playerRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId);
-            await setDoc(playerRef, { name: me.name, color: me.color, x: me.x, y: me.y, isAlive: true, role: 'crew' });
+            await setDoc(playerRef, { name: me.name, color: me.color, x: me.x, y: me.y, isAlive: true, role: 'crew', isStealth: false, angle: 0, isDancing: false });
             startListening();
         }
 
@@ -296,11 +374,45 @@
                 const newPlayers = {}; snapshot.forEach(doc => { newPlayers[doc.id] = doc.data(); }); players = newPlayers; updateLobbyList();
                 if (players[userId]) {
                     me.isAlive = players[userId].isAlive; me.role = players[userId].role;
-                    if (globalState.status === 'playing') document.getElementById('btn-catch').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                    if (globalState.status === 'playing') {
+                        document.getElementById('btn-catch').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                        document.getElementById('btn-stealth').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                        document.getElementById('btn-teleport').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                        document.getElementById('alien-chat-container').style.display = (me.role === 'alien') ? 'block' : 'none';
+                    }
                 }
                 if (globalState.status === 'meeting') renderVoteButtons();
             });
-            // チャット同期省略
+
+            const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
+            const qPublic = query(chatCol, orderBy('timestamp', 'asc'));
+            onSnapshot(qPublic, (snapshot) => {
+                const chatBox = document.getElementById('chat-messages'); chatBox.innerHTML = '';
+                snapshot.forEach(docSnap => {
+                    const msg = docSnap.data();
+                    if(msg.type !== 'public') return; 
+                    const div = document.createElement('div');
+                    div.className = `p-1 rounded-lg text-black text-sm ${msg.senderId === userId ? 'bg-green-200 self-end' : 'bg-gray-100 self-start'} max-w-[90%]`;
+                    div.innerHTML = `<span class="font-bold text-[10px] text-gray-500 block">${msg.senderName}</span>${msg.text}`; chatBox.appendChild(div);
+                });
+                chatBox.scrollTop = chatBox.scrollHeight;
+            });
+            
+            const chatAlienCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_alien_${currentRoomId}`);
+            const qAlien = query(chatAlienCol, orderBy('timestamp', 'asc'));
+            onSnapshot(qAlien, (snapshot) => {
+                if (me.role !== 'alien') return; 
+                const boxPlay = document.getElementById('alien-chat-messages-play'); boxPlay.innerHTML = '';
+                const boxMeeting = document.getElementById('alien-chat-messages-meeting'); boxMeeting.innerHTML = '';
+                snapshot.forEach(docSnap => {
+                    const msg = docSnap.data();
+                    const div = document.createElement('div');
+                    div.className = `p-1 rounded-lg text-white text-xs ${msg.senderId === userId ? 'bg-purple-600 self-end' : 'bg-purple-800 self-start'} max-w-[90%] border border-purple-400`;
+                    div.innerHTML = `<span class="font-bold text-[9px] text-purple-300 block">${msg.senderName}</span>${msg.text}`; 
+                    boxPlay.appendChild(div.cloneNode(true)); boxMeeting.appendChild(div);
+                });
+                boxPlay.scrollTop = boxPlay.scrollHeight; boxMeeting.scrollTop = boxMeeting.scrollHeight;
+            });
         }
 
         function updateLobbyList() {
@@ -312,19 +424,30 @@
             });
         }
 
+        function getRandomElements(arr, num) { const shuffled = [...arr].sort(() => 0.5 - Math.random()); return shuffled.slice(0, num); }
+
         async function startFirebaseGame() {
             const playerIds = Object.keys(players); if (playerIds.length < 2) { showAlert('2人いじょうであそんでね！'); return; }
-            const alienId = playerIds[Math.floor(Math.random() * playerIds.length)];
+            
+            let numAliens = 1; if (playerIds.length >= 6) { numAliens = 2; }
+            const selectedAlienIds = getRandomElements(playerIds, numAliens);
 
-            completedTasks = []; let crewCount = 0;
+            completedTasks = []; let crewCount = 0; stealthTimer = 0; stealthCooldown = 0; me.isDancing = false; myDanceTimer = 0; me.angle = 0; teleportCooldown = 0; 
+
             for (let pid of playerIds) {
-                const isAlien = (pid === alienId); if (!isAlien) crewCount++;
+                const isAlien = selectedAlienIds.includes(pid); if (!isAlien) crewCount++;
                 const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, pid);
-                // スタート地点を中央通路に
-                await updateDoc(pRef, { role: isAlien ? 'alien' : 'crew', isAlive: true, x: 1000 + (Math.random()-0.5)*100, y: 500 + (Math.random()-0.5)*100 });
+                await updateDoc(pRef, { role: isAlien ? 'alien' : 'crew', isAlive: true, isStealth: false, angle: 0, isDancing: false, x: 1000 + (Math.random()-0.5)*100, y: 500 + (Math.random()-0.5)*100 });
             }
+            
+            const cPub = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
+            const dPub = await getDocs(cPub); dPub.forEach(d => deleteDoc(d.ref));
+            const cAli = collection(db, 'artifacts', appId, 'public', 'data', `chats_alien_${currentRoomId}`);
+            const dAli = await getDocs(cAli); dAli.forEach(d => deleteDoc(d.ref));
+
             const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
-            await setDoc(globalRef, { status: 'playing', alienId: alienId, meetingCaller: null, votes: {}, lastExiled: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: crewCount * 8, winner: null });
+            // 🦴 deadBodies の初期化
+            await setDoc(globalRef, { status: 'playing', alienIds: selectedAlienIds, meetingCaller: null, votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: crewCount * 8, winner: null, deadBodies: [] });
         }
 
         function startSoloGame() {
@@ -332,25 +455,71 @@
             const nameInput = document.getElementById('player-name-input').value.trim(); if (!nameInput) { showAlert('なまえをいれてね！'); return; }
             const diffRadios = document.getElementsByName('cpu-level'); for(let r of diffRadios){ if(r.checked) cpuLevel = r.value; }
             
-            me.name = nameInput; me.x = 1000; me.y = 500; me.isAlive = true; completedTasks = [];
+            me.name = nameInput; me.x = 1000; me.y = 500; me.isAlive = true; completedTasks = []; me.isStealth = false;
+            me.angle = 0; me.isDancing = false; myDanceTimer = 0; stealthTimer = 0; stealthCooldown = 0; teleportCooldown = 0;
+            
             const botNames = ['ロボ1', 'ロボ2', 'ロボ3']; const botColors = ['#3b82f6', '#22c55e', '#eab308'].filter(c => c !== me.color);
             players = {}; players[userId] = me; cpuData = [];
             
             for (let i=0; i<3; i++) {
                 const bId = 'bot_' + i; const bx = 1000 + (Math.random()-0.5)*100; const by = 500 + (Math.random()-0.5)*100;
-                players[bId] = { name: botNames[i], color: botColors[i] || '#ffffff', x: bx, y: by, isAlive: true, role: 'crew' };
-                cpuData.push({ id: bId, targetX: bx, targetY: by, speed: 200, completedTasks: [], taskTarget: null, taskTimer: 0, stuckTimer: 0 });
+                players[bId] = { name: botNames[i], color: botColors[i] || '#ffffff', x: bx, y: by, isAlive: true, role: 'crew', isStealth: false, isDancing: false, angle: 0 };
+                cpuData.push({ id: bId, targetX: bx, targetY: by, speed: 200, completedTasks: [], taskTarget: null, taskTimer: 0, stuckTimer: 0, stealthCooldown: 0, stealthTimer: 0, danceTimer: 0, teleportCooldown: 0 });
             }
             const allIds = Object.keys(players); const alienId = allIds[Math.floor(Math.random() * allIds.length)];
             allIds.forEach(id => players[id].role = (id === alienId) ? 'alien' : 'crew'); me.role = players[userId].role;
             
-            globalState = { status: 'playing', alienId: alienId, votes: {}, lastExiled: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 24, winner: null };
+            // 🦴 deadBodies の初期化
+            globalState = { status: 'playing', alienIds: [alienId], votes: {}, lastExiled: null, exiledRole: null, taskProgress: 0, completedTaskCount: 0, totalTaskCount: 24, winner: null, deadBodies: [] };
+            
             document.getElementById('btn-catch').style.display = (me.role === 'alien') ? 'block' : 'none';
+            document.getElementById('btn-stealth').style.display = (me.role === 'alien') ? 'block' : 'none';
+            document.getElementById('btn-teleport').style.display = (me.role === 'alien') ? 'block' : 'none';
+            document.getElementById('alien-chat-container').style.display = (me.role === 'alien') ? 'block' : 'none'; 
+            
             handleStateChange('lobby', 'playing', globalState); startCPUAI();
         }
 
+        async function activateStealth() {
+            if (me.role !== 'alien' || !me.isAlive || stealthCooldown > 0) return;
+            me.isStealth = true; stealthTimer = 5; stealthCooldown = 20;
+            if (gameMode === 'multi') { try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); await updateDoc(pRef, { isStealth: true }); } catch(e){} }
+        }
+
+        async function activateTeleport() {
+            if (me.role !== 'alien' || !me.isAlive || teleportCooldown > 0) return;
+            const safePos = getRandomSafePosition(); me.x = safePos.x; me.y = safePos.y; teleportCooldown = 30;
+            if (gameMode === 'multi') { try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); await updateDoc(pRef, { x: me.x, y: me.y }); } catch(e){} }
+        }
+
+        async function startDancing() {
+            if (globalState.status !== 'playing') return;
+            if (me.isDancing) return; 
+            me.isDancing = true; myDanceTimer = 0.5; dx = 0; dy = 0; 
+            if (gameMode === 'multi') { try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); await updateDoc(pRef, { isDancing: true }); } catch(e){} }
+        }
+
+        // 📢 死体の通報アクション
+        async function reportBody() {
+            if (!me.isAlive) return;
+            if (gameMode === 'multi') {
+                const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
+                await updateDoc(globalRef, { status: 'meeting', meetingCaller: me.name + ' (死体発見)', votes: {}, lastExiled: null, exiledRole: null, deadBodies: [] });
+            } else {
+                globalState.status = 'meeting'; 
+                globalState.meetingCaller = me.name + ' (死体発見)'; 
+                globalState.votes = {}; globalState.lastExiled = null; globalState.exiledRole = null;
+                globalState.deadBodies = [];
+                cpuData.forEach(cpu => {
+                    const p = players[cpu.id];
+                    if (p && p.isAlive) { const aliveIds = Object.keys(players).filter(id => players[id].isAlive); aliveIds.push('skip'); globalState.votes[cpu.id] = aliveIds[Math.floor(Math.random() * aliveIds.length)]; }
+                });
+                handleStateChange('playing', 'meeting', globalState);
+            }
+        }
+
         /* -------------------------------------------
-           CPU AI (壁回避機能付き)
+           CPU AI 
         ------------------------------------------- */
         function startCPUAI() {
             if (cpuTimer) clearInterval(cpuTimer);
@@ -360,59 +529,93 @@
 
             cpuTimer = setInterval(() => {
                 if (globalState.status !== 'playing') return;
+                const dtCPU = moveInterval / 1000; 
+
                 cpuData.forEach(cpu => {
                     const p = players[cpu.id]; if (!p) return;
                     
-                    if (!p.isAlive) {
-                        cpu.targetX = p.x + (Math.random() - 0.5) * 800; cpu.targetY = p.y + (Math.random() - 0.5) * 800;
-                        cpu.speed = aiSpeed * 1.5; return;
+                    if (cpu.danceTimer > 0) { cpu.danceTimer -= dtCPU; if (cpu.danceTimer <= 0) p.isDancing = false; else return; }
+                    if (!p.isAlive) { cpu.targetX = p.x + (Math.random() - 0.5) * 800; cpu.targetY = p.y + (Math.random() - 0.5) * 800; cpu.speed = aiSpeed * 1.5; return; }
+                    if (cpu.teleportCooldown > 0) cpu.teleportCooldown -= dtCPU;
+
+                    // 📢 CPUの死体発見通報
+                    if (globalState.deadBodies && globalState.deadBodies.length > 0) {
+                        let nearDeadBody = false;
+                        globalState.deadBodies.forEach(b => { if (Math.hypot(p.x - b.x, p.y - b.y) < 120) nearDeadBody = true; });
+                        if (nearDeadBody && Math.random() < 0.2) {
+                            globalState.status = 'meeting'; globalState.meetingCaller = p.name + ' (死体発見)'; globalState.votes = {}; globalState.lastExiled = null; globalState.exiledRole = null; globalState.deadBodies = [];
+                            cpuData.forEach(c => { const cp = players[c.id]; if (cp && cp.isAlive) { const aliveIds = Object.keys(players).filter(id => players[id].isAlive); aliveIds.push('skip'); globalState.votes[c.id] = aliveIds[Math.floor(Math.random() * aliveIds.length)]; } });
+                            handleStateChange('playing', 'meeting', globalState); return;
+                        }
                     }
 
                     if (p.role === 'alien') {
-                        let closestCrew = null; let minDist = 9999;
+                        if (cpu.stealthCooldown > 0) cpu.stealthCooldown -= dtCPU; 
+                        if (cpu.stealthTimer > 0) { cpu.stealthTimer -= dtCPU; if (cpu.stealthTimer <= 0) p.isStealth = false; }
+
+                        let closestCrew = null; let minDist = 9999; let closestCrewId = null;
                         Object.keys(players).forEach(tgtId => {
                             const tgt = players[tgtId];
                             if (tgtId !== cpu.id && tgt.isAlive && tgt.role === 'crew') {
-                                const d = Math.hypot(p.x - tgt.x, p.y - tgt.y); if (d < minDist) { minDist = d; closestCrew = tgt; }
+                                const d = Math.hypot(p.x - tgt.x, p.y - tgt.y); if (d < minDist) { minDist = d; closestCrew = tgt; closestCrewId = tgtId; }
                             }
                         });
+
+                        if (cpu.teleportCooldown <= 0 && (cpu.stuckTimer > 5 || Math.random() < 0.05)) {
+                            const safePos = getRandomSafePosition(); p.x = safePos.x; p.y = safePos.y; cpu.targetX = p.x; cpu.targetY = p.y;
+                            cpu.teleportCooldown = 30; cpu.stuckTimer = 0;
+                        }
+
                         if (closestCrew) {
+                            if (minDist < 400 && minDist > 100 && cpu.stealthCooldown <= 0) { p.isStealth = true; cpu.stealthTimer = 5; cpu.stealthCooldown = 20; }
                             if (cpuLevel === 'hard' || (cpuLevel === 'normal' && Math.random() < 0.7)) { cpu.targetX = closestCrew.x; cpu.targetY = closestCrew.y; } 
                             else { cpu.targetX = p.x + (Math.random() - 0.5) * 600; cpu.targetY = p.y + (Math.random() - 0.5) * 600; }
+                            
                             if (minDist < catchDist) {
-                                closestCrew.isAlive = false; if (closestCrew === me) { me.isAlive = false; killMeFirebaseSync(); }
+                                closestCrew.isAlive = false; 
+                                // 🦴 死体を追加
+                                globalState.deadBodies = [...(globalState.deadBodies || []), { id: closestCrewId, x: closestCrew.x, y: closestCrew.y, color: closestCrew.color }];
+                                if (closestCrew === me) { me.isAlive = false; killMeFirebaseSync(); }
                                 checkWinConditionSolo(); 
                             }
                         }
                     } else { 
-                        let alienDist = 9999; let alienObj = null;
-                        if (players[globalState.alienId] && players[globalState.alienId].isAlive) {
-                            alienObj = players[globalState.alienId]; alienDist = Math.hypot(p.x - alienObj.x, p.y - alienObj.y);
-                        }
+                        let alienDist = 9999; 
+                        globalState.alienIds.forEach(aId => {
+                            if (players[aId] && players[aId].isAlive && !players[aId].isStealth) {
+                                const d = Math.hypot(p.x - players[aId].x, p.y - players[aId].y);
+                                if (d < alienDist) alienDist = d; 
+                            }
+                        });
+                        
                         if (cpuLevel !== 'easy' && alienDist < 300) { 
-                            cpu.targetX = p.x + (p.x - alienObj.x); cpu.targetY = p.y + (p.y - alienObj.y); cpu.taskTarget = null;
+                            let closestA = null;
+                            globalState.alienIds.forEach(aId => {
+                                if (players[aId] && players[aId].isAlive) {
+                                    if(!closestA) closestA = players[aId];
+                                    else if(Math.hypot(p.x - players[aId].x, p.y - players[aId].y) < Math.hypot(p.x - closestA.x, p.y - closestA.y)) closestA = players[aId];
+                                }
+                            });
+                            if (closestA) { cpu.targetX = p.x + (p.x - closestA.x); cpu.targetY = p.y + (p.y - closestA.y); cpu.taskTarget = null; }
                         } else {
                             if (!cpu.taskTarget) {
                                 const available = taskStations.filter(t => !cpu.completedTasks.includes(t.id));
-                                if (available.length > 0) {
-                                    cpu.taskTarget = available[Math.floor(Math.random() * available.length)];
-                                    cpu.targetX = cpu.taskTarget.x; cpu.targetY = cpu.taskTarget.y;
-                                }
+                                if (available.length > 0) { cpu.taskTarget = available[Math.floor(Math.random() * available.length)]; cpu.targetX = cpu.taskTarget.x; cpu.targetY = cpu.taskTarget.y; }
+                                else if (Math.random() < 0.2) { p.isDancing = true; cpu.danceTimer = 0.5; }
                             } else {
                                 if (Math.hypot(p.x - cpu.taskTarget.x, p.y - cpu.taskTarget.y) < 30) {
                                     cpu.targetX = p.x; cpu.targetY = p.y; cpu.taskTimer++;
                                     if (cpu.taskTimer > 1) { 
-                                        cpu.completedTasks.push(cpu.taskTarget.id);
-                                        globalState.completedTaskCount++;
+                                        cpu.completedTasks.push(cpu.taskTarget.id); globalState.completedTaskCount++;
                                         globalState.taskProgress = Math.min(100, Math.floor((globalState.completedTaskCount / globalState.totalTaskCount) * 100));
                                         cpu.taskTarget = null; cpu.taskTimer = 0; checkWinConditionSolo();
+                                        if (Math.random() < 0.5) { p.isDancing = true; cpu.danceTimer = 0.5; }
                                     }
                                 }
                             }
                         }
                     }
-                    cpu.targetX = Math.max(50, Math.min(MAP_SIZE - 50, cpu.targetX)); cpu.targetY = Math.max(50, Math.min(MAP_SIZE - 50, cpu.targetY));
-                    cpu.speed = aiSpeed;
+                    cpu.targetX = Math.max(50, Math.min(MAP_SIZE - 50, cpu.targetX)); cpu.targetY = Math.max(50, Math.min(MAP_SIZE - 50, cpu.targetY)); cpu.speed = aiSpeed;
                 });
             }, moveInterval);
         }
@@ -438,14 +641,14 @@
         }
 
         async function checkWinConditionMulti(currentTaskCount, totalTaskCount) {
-            let aliveCrews = 0; let alienAlive = false;
-            Object.values(players).forEach(p => {
-                if (p.isAlive) { if (p.role === 'crew') aliveCrews++; else if (p.role === 'alien') alienAlive = true; }
+            let aliveCrews = 0; let aliveAliens = 0;
+            Object.values(players).forEach(p => { 
+                if (p.isAlive) { if (p.role === 'crew') aliveCrews++; else if (p.role === 'alien') aliveAliens++; } 
             });
             let winner = null;
             if (currentTaskCount >= totalTaskCount) winner = 'crew';
-            else if (!alienAlive) winner = 'crew';
-            else if (aliveCrews === 0) winner = 'alien';
+            else if (aliveAliens === 0) winner = 'crew';
+            else if (aliveCrews <= aliveAliens) winner = 'alien'; 
 
             if (winner && globalState.status !== 'finished') {
                 const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
@@ -454,14 +657,14 @@
         }
 
         function checkWinConditionSolo() {
-            let aliveCrews = 0; let alienAlive = false;
-            Object.values(players).forEach(p => {
-                if (p.isAlive) { if (p.role === 'crew') aliveCrews++; else if (p.role === 'alien') alienAlive = true; }
+            let aliveCrews = 0; let aliveAliens = 0;
+            Object.values(players).forEach(p => { 
+                if (p.isAlive) { if (p.role === 'crew') aliveCrews++; else if (p.role === 'alien') aliveAliens++; } 
             });
             let winner = null;
             if (globalState.completedTaskCount >= globalState.totalTaskCount) winner = 'crew';
-            else if (!alienAlive) winner = 'crew';
-            else if (aliveCrews === 0) winner = 'alien';
+            else if (aliveAliens === 0) winner = 'crew';
+            else if (aliveCrews <= aliveAliens) winner = 'alien';
 
             if (winner && globalState.status !== 'finished') {
                 globalState.status = 'finished'; globalState.winner = winner; handleStateChange('playing', 'finished', globalState);
@@ -471,43 +674,85 @@
         function handleStateChange(oldStatus, newStatus, stateData) {
             if (oldStatus === newStatus) return;
 
+            if (oldStatus === 'meeting' && newStatus === 'playing') {
+                const exiled = stateData.lastExiled; const exiledRole = stateData.exiledRole;
+                if (exiled && exiled !== '誰も') {
+                    const roleText = (exiledRole === 'alien') ? "エイリアンでした 👾" : "エイリアンではありませんでした 👨‍🚀";
+                    showAlert(`🗳️ 投票の結果...\n\n${exiled} が追放されました！\n\n${exiled} は ${roleText}`);
+                } else { showAlert(`🗳️ 投票の結果...\n\n誰も追放されませんでした。`); }
+            }
+
             if (newStatus === 'finished') {
                 switchScreen('victory-screen');
                 const title = document.getElementById('victory-title'); const desc = document.getElementById('victory-desc');
-                let exiledText = stateData.lastExiled ? (stateData.lastExiled !== '誰も' ? `(追放: ${stateData.lastExiled})` : '') : '';
+                
+                let exiledText = '';
+                if (oldStatus === 'meeting' || stateData.lastExiled) {
+                    if (stateData.lastExiled && stateData.lastExiled !== '誰も') {
+                        const roleText = (stateData.exiledRole === 'alien') ? "エイリアンでした 👾" : "エイリアンではありませんでした 👨‍🚀";
+                        exiledText = `\n(最後の追放: ${stateData.lastExiled} は ${roleText})`;
+                    } else if (stateData.lastExiled === '誰も') { exiledText = `\n(最後の追放: 誰も追放されませんでした)`; }
+                }
 
                 if (stateData.winner === 'crew') {
                     title.innerText = "クルーの勝利！🏆"; title.className = "text-5xl md:text-7xl font-bold mb-4 text-blue-400 drop-shadow-lg";
-                    desc.innerText = "すべてのタスクを完了した か、\nエイリアンを追放した！\n" + exiledText;
+                    desc.innerText = "すべてのタスクを完了した か、\nエイリアンを追放した！" + exiledText;
                 } else {
                     title.innerText = "エイリアンの勝利！💀"; title.className = "text-5xl md:text-7xl font-bold mb-4 text-red-500 drop-shadow-lg";
-                    desc.innerText = "クルーが全滅させられました...\n" + exiledText;
+                    desc.innerText = "クルーが全滅（または同数）させられました..." + exiledText;
                 }
+                
+                document.getElementById('alien-chat-container').style.display = 'none';
             } 
             else if (newStatus === 'playing') {
                 switchScreen('role-screen');
                 const title = document.getElementById('role-title'); const desc = document.getElementById('role-desc');
                 setTimeout(() => {
-                    if (me.role === 'alien') { title.innerText = "あなたは エイリアン 👾"; title.className = "text-4xl md:text-5xl font-bold mb-4 text-red-500"; desc.innerText = "クルーにバレずにつかまえろ！"; } 
-                    else { title.innerText = "あなたは クルー 👨‍🚀"; title.className = "text-4xl md:text-5xl font-bold mb-4 text-blue-400"; desc.innerText = "タスクをこなしてエイリアンからにげろ！"; }
+                    if (me.role === 'alien') { 
+                        title.innerText = "あなたは エイリアン 👾"; title.className = "text-4xl md:text-5xl font-bold mb-4 text-red-500"; 
+                        let alienCount = globalState.alienIds ? globalState.alienIds.length : 1;
+                        if (alienCount > 1) { desc.innerText = "仲間のエイリアンと協力してクルーを全滅させろ！"; } 
+                        else { desc.innerText = "ステルスやテレポートで隠れてクルーをつかまえろ！"; }
+                    } else { 
+                        title.innerText = "あなたは クルー 👨‍🚀"; title.className = "text-4xl md:text-5xl font-bold mb-4 text-blue-400"; 
+                        desc.innerText = "タスクをこなしてエイリアンからにげろ！"; 
+                    }
                     document.getElementById('my-role-text').innerText = me.role === 'alien' ? 'エイリアン 👾' : 'クルー 👨‍🚀';
-                    setTimeout(() => { if(globalState.status === 'playing') switchScreen('ui-layer'); }, 3000);
+                    setTimeout(() => { 
+                        if(globalState.status === 'playing') {
+                            switchScreen('ui-layer'); 
+                            document.getElementById('btn-stealth').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                            document.getElementById('btn-catch').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                            document.getElementById('btn-teleport').style.display = (me.role === 'alien' && me.isAlive) ? 'block' : 'none';
+                            
+                            if (me.role === 'alien') document.getElementById('alien-chat-container').style.display = 'block';
+                        }
+                    }, 3000);
                 }, 500);
             } 
             else if (newStatus === 'meeting') {
                 document.getElementById('meeting-desc').innerText = `🚨 ${globalState.meetingCaller} がかいぎをひらきました！`;
                 if (gameMode === 'solo') document.getElementById('chat-messages').innerHTML = '<div class="text-center text-gray-400 text-sm mt-4">CPU対戦ではチャットはできません</div>';
+                
+                if (me.role === 'alien') {
+                    document.getElementById('alien-meeting-chat-area').style.display = 'flex';
+                    document.getElementById('btn-send-alien-chat-meeting').style.display = 'block';
+                } else {
+                    document.getElementById('alien-meeting-chat-area').style.display = 'none';
+                    document.getElementById('btn-send-alien-chat-meeting').style.display = 'none';
+                }
+                document.getElementById('alien-chat-container').style.display = 'none'; 
+                
                 switchScreen('meeting-screen'); renderVoteButtons();
             } 
             else if (newStatus === 'lobby') {
-                switchScreen('wait-screen'); completedTasks = [];
-                // 戻る時に自分の位置リセット
-                me.x = 1000; me.y = 500;
+                switchScreen('wait-screen'); completedTasks = []; me.x = 1000; me.y = 500; teleportCooldown = 0;
+                document.getElementById('alien-chat-container').style.display = 'none';
             }
         }
 
         /* -------------------------------------------
-           会議関連
+           会議関連 & 💬チャット送信機能
         ------------------------------------------- */
         function renderVoteButtons() {
             const list = document.getElementById('vote-list'); list.innerHTML = ''; const status = document.getElementById('my-vote-status');
@@ -546,69 +791,104 @@
             if (closestId) {
                 if (gameMode === 'multi') {
                     const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, closestId); await updateDoc(pRef, { isAlive: false });
+                    
+                    // 🦴 オンラインでの死体追加
+                    const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
+                    const newBodies = [...(globalState.deadBodies || []), { id: closestId, x: players[closestId].x, y: players[closestId].y, color: players[closestId].color }];
+                    await updateDoc(globalRef, { deadBodies: newBodies });
+
                     players[closestId].isAlive = false; checkWinConditionMulti(globalState.completedTaskCount || 0, globalState.totalTaskCount);
-                } else { players[closestId].isAlive = false; checkWinConditionSolo(); }
+                } else { 
+                    players[closestId].isAlive = false; 
+                    // 🦴 ソロでの死体追加
+                    globalState.deadBodies = [...(globalState.deadBodies || []), { id: closestId, x: players[closestId].x, y: players[closestId].y, color: players[closestId].color }];
+                    checkWinConditionSolo(); 
+                }
                 document.getElementById('btn-catch').style.display = 'none'; setTimeout(() => { if(me.isAlive && globalState.status === 'playing') document.getElementById('btn-catch').style.display = 'block'; }, 3000);
             }
         }
 
         async function killMeFirebaseSync() {
             if (gameMode === 'multi') { try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); await updateDoc(pRef, { isAlive: false }); } catch(e){} }
+            document.getElementById('btn-stealth').style.display = 'none'; document.getElementById('btn-teleport').style.display = 'none'; document.getElementById('btn-report').style.display = 'none';
         }
 
         async function callMeeting() {
             if (!me.isAlive) return;
             if (gameMode === 'multi') {
                 const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
-                await updateDoc(globalRef, { status: 'meeting', meetingCaller: me.name, votes: {}, lastExiled: null });
+                await updateDoc(globalRef, { status: 'meeting', meetingCaller: me.name, votes: {}, lastExiled: null, exiledRole: null, deadBodies: [] });
             } else {
-                globalState.status = 'meeting'; globalState.meetingCaller = me.name; globalState.votes = {}; globalState.lastExiled = null;
+                globalState.status = 'meeting'; globalState.meetingCaller = me.name; globalState.votes = {}; globalState.lastExiled = null; globalState.exiledRole = null; globalState.deadBodies = [];
                 cpuData.forEach(cpu => {
                     const p = players[cpu.id];
-                    if (p && p.isAlive) {
-                        const aliveIds = Object.keys(players).filter(id => players[id].isAlive); aliveIds.push('skip');
-                        globalState.votes[cpu.id] = aliveIds[Math.floor(Math.random() * aliveIds.length)];
-                    }
+                    if (p && p.isAlive) { const aliveIds = Object.keys(players).filter(id => players[id].isAlive); aliveIds.push('skip'); globalState.votes[cpu.id] = aliveIds[Math.floor(Math.random() * aliveIds.length)]; }
                 });
                 handleStateChange('playing', 'meeting', globalState);
             }
         }
 
         async function endMeeting() {
-            const votes = globalState.votes || {}; const voteCounts = {};
-            Object.values(votes).forEach(v => { voteCounts[v] = (voteCounts[v] || 0) + 1; });
+            const votes = globalState.votes || {}; const voteCounts = {}; Object.values(votes).forEach(v => { voteCounts[v] = (voteCounts[v] || 0) + 1; });
             let maxVotes = 0; let exileId = null; let isTie = false;
-            Object.entries(voteCounts).forEach(([vid, count]) => {
-                if (count > maxVotes) { maxVotes = count; exileId = vid; isTie = false; } else if (count === maxVotes) { isTie = true; }
-            });
-            if (isTie || exileId === 'skip') exileId = null;
+            Object.entries(voteCounts).forEach(([vid, count]) => { if (count > maxVotes) { maxVotes = count; exileId = vid; isTie = false; } else if (count === maxVotes) { isTie = true; } });
+            if (isTie || exileId === 'skip') exileId = null; 
+            
             const exiledName = exileId ? players[exileId].name : '誰も';
+            const exiledRole = exileId ? players[exileId].role : null; 
 
             if (gameMode === 'multi') {
                 if (exileId) { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, exileId); await updateDoc(pRef, { isAlive: false }); players[exileId].isAlive = false; }
-                const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main');
-                await updateDoc(globalRef, { status: 'playing', lastExiled: exiledName, votes: {} });
+                const globalRef = doc(db, 'artifacts', appId, 'public', 'data', `globalState_${currentRoomId}`, 'main'); 
+                await updateDoc(globalRef, { status: 'playing', lastExiled: exiledName, exiledRole: exiledRole, votes: {} });
+                
                 checkWinConditionMulti(globalState.completedTaskCount || 0, globalState.totalTaskCount);
             } else {
                 if (exileId) players[exileId].isAlive = false;
-                globalState.status = 'playing'; globalState.lastExiled = exiledName; globalState.votes = {};
+                globalState.status = 'playing'; globalState.lastExiled = exiledName; globalState.exiledRole = exiledRole; globalState.votes = {}; 
                 handleStateChange('meeting', 'playing', globalState); checkWinConditionSolo(); 
             }
         }
-        async function sendChat() { /*省略*/ }
+
+        async function sendChat(type, context = 'meeting') {
+            if (gameMode === 'solo') return;
+            
+            let inputId = (context === 'play') ? 'alien-chat-input-play' : 'chat-input';
+            const input = document.getElementById(inputId); 
+            const text = input.value.trim(); 
+            if (!text) return;
+            
+            if (type === 'public') {
+                if (!me.isAlive) { showAlert('ゴーストは全体チャットできません👻'); return; }
+                const chatCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_${currentRoomId}`);
+                await addDoc(chatCol, { type: 'public', senderId: userId, senderName: me.name, text: text, timestamp: Date.now() });
+            } else if (type === 'alien') {
+                const chatAlienCol = collection(db, 'artifacts', appId, 'public', 'data', `chats_alien_${currentRoomId}`);
+                await addDoc(chatAlienCol, { type: 'alien', senderId: userId, senderName: me.name, text: text, timestamp: Date.now() });
+            }
+            
+            input.value = '';
+        }
 
         /* -------------------------------------------
-           描画・操作・衝突判定系 (壁対応)
+           描画・操作・衝突判定系
         ------------------------------------------- */
         function setupControls() {
             const updateMovement = () => {
                 let nx = 0; let ny = 0;
-                if (keys['w'] || keys['ArrowUp']) ny -= 1; if (keys['s'] || keys['ArrowDown']) ny += 1;
-                if (keys['a'] || keys['ArrowLeft']) nx -= 1; if (keys['d'] || keys['ArrowRight']) nx += 1;
-                if (nx === 0 && ny === 0) { if (dpadDir.x !== 0 || dpadDir.y !== 0) { nx = dpadDir.x; ny = dpadDir.y; } }
+                if (!me.isDancing) {
+                    if (keys['w'] || keys['ArrowUp']) ny -= 1; if (keys['s'] || keys['ArrowDown']) ny += 1;
+                    if (keys['a'] || keys['ArrowLeft']) nx -= 1; if (keys['d'] || keys['ArrowRight']) nx += 1;
+                    if (nx === 0 && ny === 0) { if (dpadDir.x !== 0 || dpadDir.y !== 0) { nx = dpadDir.x; ny = dpadDir.y; } }
+                }
                 if (nx !== 0 && ny !== 0) { const len = Math.SQRT2; dx = nx / len; dy = ny / len; } else { dx = nx; dy = ny; }
             };
-            window.addEventListener('keydown', (e) => { if (document.activeElement && document.activeElement.tagName === 'INPUT') return; keys[e.key] = true; updateMovement(); });
+            
+            window.addEventListener('keydown', (e) => { 
+                if (document.activeElement && document.activeElement.tagName === 'INPUT') return; 
+                if (e.code === 'Space') { startDancing(); e.preventDefault(); }
+                else { keys[e.key] = true; updateMovement(); }
+            });
             window.addEventListener('keyup', (e) => { keys[e.key] = false; updateMovement(); });
 
             let dpadDir = {x:0, y:0};
@@ -622,27 +902,16 @@
             bindBtn('btn-up', 0, -1); bindBtn('btn-down', 0, 1); bindBtn('btn-left', -1, 0); bindBtn('btn-right', 1, 0);
         }
 
-        // 🧱 壁（四角形）と障害物（円形）の衝突判定
         function resolveCollisions(pObj, radius) {
+            if (!pObj.isAlive) { 
+                pObj.x = Math.max(radius, Math.min(MAP_SIZE - radius, pObj.x)); pObj.y = Math.max(radius, Math.min(MAP_SIZE - radius, pObj.y)); return;
+            }
             pObj.x = Math.max(radius, Math.min(MAP_SIZE - radius, pObj.x)); pObj.y = Math.max(radius, Math.min(MAP_SIZE - radius, pObj.y));
-            
-            // 四角い壁との判定
             walls.forEach(w => {
-                const testX = Math.max(w.x, Math.min(pObj.x, w.x + w.w));
-                const testY = Math.max(w.y, Math.min(pObj.y, w.y + w.h));
-                const distX = pObj.x - testX; const distY = pObj.y - testY;
-                const dist = Math.hypot(distX, distY);
-
-                if (dist < radius) {
-                    if (dist === 0) { pObj.y = w.y - radius; } // 中心が埋まった場合の強制排出
-                    else {
-                        const overlap = radius - dist;
-                        pObj.x += (distX / dist) * overlap; pObj.y += (distY / dist) * overlap;
-                    }
-                }
+                const testX = Math.max(w.x, Math.min(pObj.x, w.x + w.w)); const testY = Math.max(w.y, Math.min(pObj.y, w.y + w.h));
+                const distX = pObj.x - testX; const distY = pObj.y - testY; const dist = Math.hypot(distX, distY);
+                if (dist < radius) { if (dist === 0) { pObj.y = w.y - radius; } else { const overlap = radius - dist; pObj.x += (distX / dist) * overlap; pObj.y += (distY / dist) * overlap; } }
             });
-
-            // 丸い隕石との判定
             meteors.forEach(m => {
                 const dist = Math.hypot(pObj.x - m.x, pObj.y - m.y); const minDist = radius + m.r;
                 if (dist < minDist && dist > 0) { const overlap = minDist - dist; pObj.x += (pObj.x - m.x) / dist * overlap; pObj.y += (pObj.y - m.y) / dist * overlap; }
@@ -655,36 +924,65 @@
         }
 
         async function gameLoop(timestamp) {
-            if (!lastTimestamp) lastTimestamp = timestamp;
-            const dt = (timestamp - lastTimestamp) / 1000; lastTimestamp = timestamp;
+            if (!lastTimestamp) lastTimestamp = timestamp; const dt = (timestamp - lastTimestamp) / 1000; lastTimestamp = timestamp;
 
             if (globalState.status === 'playing') {
                 
                 document.getElementById('task-bar-fill').style.width = (globalState.taskProgress || 0) + '%';
                 
+                // 📢 通報ボタンのUI更新
+                let nearBody = false;
+                if (me.isAlive && globalState.deadBodies && globalState.deadBodies.length > 0) {
+                    globalState.deadBodies.forEach(b => { if (Math.hypot(me.x - b.x, me.y - b.y) < 120) nearBody = true; });
+                }
+                const btnReport = document.getElementById('btn-report');
+                if (nearBody) { btnReport.style.display = 'block'; } else { btnReport.style.display = 'none'; }
+
                 if (me.role === 'crew' && me.isAlive) {
                     let nearStation = null;
-                    taskStations.forEach(t => {
-                        if (!completedTasks.includes(t.id) && Math.hypot(me.x - t.x, me.y - t.y) < 80) nearStation = t;
-                    });
+                    taskStations.forEach(t => { if (!completedTasks.includes(t.id) && Math.hypot(me.x - t.x, me.y - t.y) < 80) nearStation = t; });
                     const btnTask = document.getElementById('btn-task');
                     if (nearStation) { btnTask.style.display = 'block'; btnTask.onclick = () => doTask(nearStation.id); } 
                     else { btnTask.style.display = 'none'; btnTask.onclick = null; }
                 } else { document.getElementById('btn-task').style.display = 'none'; }
 
-                if (dx !== 0 || dy !== 0) { me.x += dx * (me.isAlive ? speed : speed * 1.5) * dt; me.y += dy * (me.isAlive ? speed : speed * 1.5) * dt; }
+                if (me.role === 'alien' && me.isAlive) {
+                    if (stealthTimer > 0) { stealthTimer -= dt; if (stealthTimer <= 0) { me.isStealth = false; if (gameMode === 'multi') { try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { isStealth: false }); } catch(e){} } } }
+                    const btnStealth = document.getElementById('btn-stealth');
+                    if (stealthCooldown > 0) { stealthCooldown -= dt; btnStealth.innerText = `⏳ ${Math.ceil(stealthCooldown)}`; btnStealth.style.opacity = '0.5'; } 
+                    else { btnStealth.innerText = `👻 ステルス`; btnStealth.style.opacity = '1.0'; }
 
-                if (me.isAlive) {
-                    const wasAlive = me.isAlive;
-                    resolveCollisions(me, 20); checkTraps(me);
-                    if (wasAlive && !me.isAlive) { killMeFirebaseSync(); if (gameMode === 'solo') checkWinConditionSolo(); }
-                } else { me.x = Math.max(20, Math.min(MAP_SIZE - 20, me.x)); me.y = Math.max(20, Math.min(MAP_SIZE - 20, me.y)); }
+                    const btnTeleport = document.getElementById('btn-teleport');
+                    if (teleportCooldown > 0) { 
+                        teleportCooldown -= dt; 
+                        btnTeleport.innerText = `⏳ ${Math.ceil(teleportCooldown)}`; btnTeleport.style.opacity = '0.5'; 
+                    } else { 
+                        btnTeleport.innerText = `✨ テレポート`; btnTeleport.style.opacity = '1.0'; 
+                    }
+                }
+
+                if (me.isDancing) {
+                    myDanceTimer -= dt; me.angle += 1000 * dt; 
+                    if (myDanceTimer <= 0) {
+                        me.isDancing = false; me.angle = 0; 
+                        if (gameMode === 'multi') { try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { isDancing: false, angle: 0 }); } catch(e){} }
+                    }
+                }
+
+                let currentSpeed = me.isAlive ? speed : speed * 1.5;
+                if (me.isAlive && me.isStealth) currentSpeed = speed * 1.3;
+                
+                if (!me.isDancing && (dx !== 0 || dy !== 0)) { me.x += dx * currentSpeed * dt; me.y += dy * currentSpeed * dt; }
+
+                const wasAlive = me.isAlive; resolveCollisions(me, 20); 
+                if (wasAlive) checkTraps(me);
+                if (wasAlive && !me.isAlive) { killMeFirebaseSync(false); if (gameMode === 'solo') checkWinConditionSolo(); }
 
                 if (gameMode === 'multi') {
                     const now = Date.now();
-                    if (now - lastSyncTime > 100 && (dx !== 0 || dy !== 0)) {
+                    if (now - lastSyncTime > 100 && (dx !== 0 || dy !== 0 || me.isDancing)) {
                         lastSyncTime = now;
-                        try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { x: me.x, y: me.y, lastActive: now }); } catch(e) {}
+                        try { const pRef = doc(db, 'artifacts', appId, 'public', 'data', `players_${currentRoomId}`, userId); updateDoc(pRef, { x: me.x, y: me.y, lastActive: now, isDancing: me.isDancing, angle: me.angle }); } catch(e) {}
                     }
                 }
 
@@ -692,27 +990,20 @@
                     cpuData.forEach(cpu => {
                         const p = players[cpu.id]; if (!p) return;
                         
+                        if (p.isDancing) { p.angle += 1000 * dt; } else { p.angle = 0; }
+                        if (p.isDancing) return;
+
+                        let cpuCurrentSpeed = cpu.speed; if (p.isStealth) cpuCurrentSpeed = cpu.speed * 1.3;
                         const tdx = cpu.targetX - p.x; const tdy = cpu.targetY - p.y; const dist = Math.hypot(tdx, tdy);
                         if (dist > 5) { 
                             const prevX = p.x; const prevY = p.y;
-                            p.x += (tdx / dist) * cpu.speed * dt; p.y += (tdy / dist) * cpu.speed * dt; 
-                            
-                            if (p.isAlive) {
-                                const wasAlive = p.isAlive; resolveCollisions(p, 20); checkTraps(p);
-                                if (wasAlive && !p.isAlive) checkWinConditionSolo();
-                                
-                                // CPUのスタック（引っかかり）解消ロジック
-                                if (Math.hypot(p.x - prevX, p.y - prevY) < (cpu.speed * dt * 0.2)) {
-                                    cpu.stuckTimer++;
-                                    if (cpu.stuckTimer > 10) {
-                                        cpu.targetX = p.x + (1000 - p.x)*0.5 + (Math.random()-0.5)*300;
-                                        cpu.targetY = p.y + (1000 - p.y)*0.5 + (Math.random()-0.5)*300;
-                                        cpu.stuckTimer = 0; cpu.taskTarget = null;
-                                    }
-                                } else { cpu.stuckTimer = 0; }
-                            } else {
-                                p.x = Math.max(20, Math.min(MAP_SIZE - 20, p.x)); p.y = Math.max(20, Math.min(MAP_SIZE - 20, p.y));
-                            }
+                            p.x += (tdx / dist) * cpuCurrentSpeed * dt; p.y += (tdy / dist) * cpuCurrentSpeed * dt; 
+                            const wasAliveCpu = p.isAlive; resolveCollisions(p, 20); 
+                            if (wasAliveCpu) checkTraps(p);
+                            if (wasAliveCpu && !p.isAlive) checkWinConditionSolo();
+                            if (p.isAlive && Math.hypot(p.x - prevX, p.y - prevY) < (cpuCurrentSpeed * dt * 0.2)) {
+                                cpu.stuckTimer++; if (cpu.stuckTimer > 10) { cpu.targetX = p.x + (1000 - p.x)*0.5 + (Math.random()-0.5)*300; cpu.targetY = p.y + (1000 - p.y)*0.5 + (Math.random()-0.5)*300; cpu.stuckTimer = 0; cpu.taskTarget = null; }
+                            } else { cpu.stuckTimer = 0; }
                         }
                     });
                 }
@@ -725,14 +1016,30 @@
             if (globalState.status !== 'playing' && globalState.status !== 'meeting') return;
 
             const camX = canvas.width / 2 - me.x; const camY = canvas.height / 2 - me.y;
+            ctx.fillStyle = '#000000'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             ctx.save(); ctx.translate(camX, camY);
 
-            // 床
+            if (me.isAlive) {
+                const visionRadius = (me.role === 'alien') ? VISION_RADIUS_ALIEN : VISION_RADIUS_CREW;
+                ctx.beginPath(); ctx.arc(me.x, me.y, visionRadius, 0, Math.PI * 2); ctx.clip();
+            }
+
             ctx.fillStyle = '#0f172a'; ctx.fillRect(0, 0, MAP_SIZE, MAP_SIZE);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)'; ctx.lineWidth = 2;
             for (let i = 0; i <= MAP_SIZE; i += 100) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, MAP_SIZE); ctx.stroke(); ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(MAP_SIZE, i); ctx.stroke(); }
 
-            // 🛠️ タスクステーションの描画
+            // 🦴 死体の描画
+            if (globalState.deadBodies && globalState.deadBodies.length > 0) {
+                const visionRadius = (me.role === 'alien') ? VISION_RADIUS_ALIEN : VISION_RADIUS_CREW;
+                globalState.deadBodies.forEach(b => {
+                    if (me.isAlive && Math.hypot(me.x - b.x, me.y - b.y) > visionRadius) return;
+                    ctx.beginPath(); ctx.arc(b.x, b.y + 10, 20, Math.PI, 0); ctx.fillStyle = b.color; ctx.fill();
+                    ctx.strokeStyle = '#000'; ctx.lineWidth = 3; ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(b.x - 20, b.y + 10); ctx.lineTo(b.x + 20, b.y + 10); ctx.stroke();
+                    ctx.fillStyle = 'white'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.fillText('🦴', b.x, b.y + 15);
+                });
+            }
+
             taskStations.forEach(t => {
                 ctx.beginPath(); ctx.arc(t.x, t.y, 35, 0, Math.PI * 2);
                 if (me.role === 'crew' && !completedTasks.includes(t.id)) {
@@ -754,38 +1061,55 @@
                 ctx.beginPath(); ctx.arc(m.x - m.r*0.3, m.y - m.r*0.2, m.r*0.2, 0, Math.PI*2); ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.fill();
             });
 
-            // 🧱 壁の描画
-            ctx.fillStyle = '#334155'; // Slate 700
-            ctx.strokeStyle = '#0f172a'; // 壁の縁取り
-            ctx.lineWidth = 4;
-            walls.forEach(w => {
-                ctx.fillRect(w.x, w.y, w.w, w.h);
-                ctx.strokeRect(w.x, w.y, w.w, w.h);
-            });
+            ctx.fillStyle = '#334155'; ctx.strokeStyle = '#0f172a'; ctx.lineWidth = 4;
+            walls.forEach(w => { ctx.fillRect(w.x, w.y, w.w, w.h); ctx.strokeRect(w.x, w.y, w.w, w.h); });
 
             Object.entries(players).forEach(([id, p]) => {
                 const drawX = (id === userId) ? me.x : p.x; const drawY = (id === userId) ? me.y : p.y;
                 const isAlive = (id === userId) ? me.isAlive : p.isAlive;
+                const isStealth = (id === userId) ? me.isStealth : p.isStealth;
+                const currentAngle = (id === userId) ? me.angle : (p.angle || 0);
+                
+                const isAllyAlien = (me.role === 'alien' && p.role === 'alien');
+                
+                if (me.isAlive && me.role === 'crew' && isStealth && id !== userId) return; 
                 if (me.isAlive && !isAlive && id !== userId) return;
 
-                ctx.globalAlpha = isAlive ? 1.0 : 0.4; 
-                ctx.beginPath(); ctx.arc(drawX, drawY, 20, 0, Math.PI * 2);
-                ctx.fillStyle = p.color; ctx.fill();
-                ctx.strokeStyle = isAlive ? '#000' : '#fff'; ctx.lineWidth = 3; 
-                if (!isAlive) ctx.setLineDash([5, 5]); ctx.stroke(); ctx.setLineDash([]); 
+                ctx.globalAlpha = isAlive ? (isStealth ? 0.4 : 1.0) : 0.4; 
+                
+                ctx.save(); ctx.translate(drawX, drawY); ctx.rotate(currentAngle * Math.PI / 180);
+                ctx.beginPath(); ctx.arc(0, 0, 20, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill();
+                
+                if (isAlive && isStealth) { ctx.strokeStyle = '#c084fc'; ctx.lineWidth = 3; ctx.setLineDash([5, 5]); } 
+                else { ctx.strokeStyle = isAlive ? '#000' : '#fff'; ctx.lineWidth = 3; if (!isAlive) ctx.setLineDash([5, 5]); }
+                ctx.stroke(); ctx.setLineDash([]); 
 
-                if (me.role === 'alien' && p.role === 'alien' && id !== userId && isAlive) {
-                    ctx.fillStyle = 'red'; ctx.font = '20px sans-serif'; ctx.fillText('👾', drawX, drawY + 8);
-                }
-                if (!isAlive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.font = '20px sans-serif'; ctx.fillText('👻', drawX, drawY + 8); }
+                if (currentAngle > 0 && isAlive) { ctx.fillStyle = 'white'; ctx.font = '16px sans-serif'; ctx.fillText('♪', 0, 5); } 
+                else if (me.role === 'alien' && p.role === 'alien' && id !== userId && isAlive) { ctx.fillStyle = 'red'; ctx.font = '20px sans-serif'; ctx.fillText('👾', 0, 8); }
+                
+                if (!isAlive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.8)'; ctx.font = '20px sans-serif'; ctx.fillText('👻', 0, 8); }
+                ctx.restore(); 
 
                 ctx.globalAlpha = 1.0;
                 ctx.fillStyle = 'white'; ctx.font = 'bold 16px "M PLUS Rounded 1c", sans-serif';
                 ctx.textAlign = 'center'; ctx.fillText(p.name + (isAlive ? '' : ' 👻'), drawX, drawY - 30);
             });
-            ctx.restore();
-            
+
+            if (me.isAlive) {
+                const visionRadius = (me.role === 'alien') ? VISION_RADIUS_ALIEN : VISION_RADIUS_CREW;
+                const gradient = ctx.createRadialGradient(me.x, me.y, visionRadius * 0.5, me.x, me.y, visionRadius);
+                gradient.addColorStop(0, 'rgba(0,0,0,0)'); gradient.addColorStop(1, 'rgba(0,0,0,1)');
+                ctx.fillStyle = gradient; ctx.fillRect(me.x - visionRadius, me.y - visionRadius, visionRadius*2, visionRadius*2);
+            }
+
+            ctx.restore(); 
             drawMiniMap();
+            
+            if (me.isAlive && me.isStealth && globalState.status === 'playing') {
+                ctx.fillStyle = 'rgba(147, 51, 234, 0.15)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = '#d8b4fe'; ctx.font = 'bold 24px sans-serif'; ctx.textAlign = 'center';
+                ctx.fillText('👻 ステルス発動中！（クルーからは見えません）', canvas.width/2, 80);
+            }
 
             if (!me.isAlive && globalState.status === 'playing') {
                 ctx.fillStyle = 'rgba(0, 200, 255, 0.15)'; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -800,25 +1124,37 @@
             ctx.fillStyle = 'rgba(0, 0, 0, 0.6)'; ctx.fillRect(startX, startY, mapSize, mapSize);
             ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)'; ctx.strokeRect(startX, startY, mapSize, mapSize);
 
-            // 🧱 ミニマップの壁
+            const visionRadius = (me.role === 'alien') ? VISION_RADIUS_ALIEN : VISION_RADIUS_CREW;
+
             ctx.fillStyle = 'rgba(100, 116, 139, 0.8)';
             walls.forEach(w => { ctx.fillRect(startX + w.x * scale, startY + w.y * scale, w.w * scale, w.h * scale); });
 
-            // 🛠️ ミニマップのタスク点
             taskStations.forEach(t => {
                 if (me.role === 'crew' && !completedTasks.includes(t.id)) {
+                    if (me.isAlive && Math.hypot(me.x - t.x, me.y - t.y) > visionRadius) return;
                     ctx.fillStyle = '#facc15'; ctx.beginPath(); ctx.arc(startX + t.x * scale, startY + t.y * scale, 3, 0, Math.PI * 2); ctx.fill();
                 }
             });
 
-            ctx.fillStyle = '#ef4444'; traps.forEach(t => { ctx.beginPath(); ctx.arc(startX + t.x * scale, startY + t.y * scale, t.r * scale, 0, Math.PI * 2); ctx.fill(); });
+            ctx.fillStyle = '#ef4444'; 
+            traps.forEach(t => { 
+                if (me.isAlive && Math.hypot(me.x - t.x, me.y - t.y) > visionRadius) return;
+                ctx.beginPath(); ctx.arc(startX + t.x * scale, startY + t.y * scale, t.r * scale, 0, Math.PI * 2); ctx.fill(); 
+            });
             
             Object.entries(players).forEach(([id, p]) => {
                 const pX = (id === userId) ? me.x : p.x; const pY = (id === userId) ? me.y : p.y;
                 const isAlive = (id === userId) ? me.isAlive : p.isAlive;
+                const isStealth = (id === userId) ? me.isStealth : p.isStealth;
+                
+                const isAllyAlien = (me.role === 'alien' && p.role === 'alien');
+                
+                if (me.isAlive && me.role === 'crew' && isStealth && id !== userId) return;
                 if (me.isAlive && !isAlive && id !== userId) return;
+                if (me.isAlive && id !== userId && Math.hypot(me.x - pX, me.y - pY) > visionRadius) return;
+                
                 ctx.beginPath(); ctx.arc(startX + pX * scale, startY + pY * scale, 3.5, 0, Math.PI * 2);
-                ctx.fillStyle = (id === userId) ? '#ffffff' : (isAlive ? p.color : 'rgba(255,255,255,0.5)'); 
+                ctx.fillStyle = (id === userId) ? '#ffffff' : (isAlive ? (isStealth ? '#c084fc' : p.color) : 'rgba(255,255,255,0.5)'); 
                 ctx.fill();
             });
         }
