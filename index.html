@@ -3,225 +3,306 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>顧客提案用 2D/3D レイアウトシミュレーター</title>
+<title>CAD前 2D/3D 要件定義・レイアウトツール</title>
 <style>
-  body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; overflow: hidden; background-color: #f5f5f5; }
+  :root { --primary: #2c3e50; --accent: #e67e22; --bg: #ecf0f1; --panel: #ffffff; }
+  * { box-sizing: border-box; }
+  body { margin: 0; display: flex; flex-direction: column; height: 100vh; font-family: 'Segoe UI', Meiryo, sans-serif; background-color: var(--bg); overflow: hidden; }
   
-  /* ヘッダー・ツールバー */
-  #toolbar { padding: 10px 20px; background: #2c3e50; color: white; display: flex; gap: 15px; align-items: center; box-shadow: 0 2px 5px rgba(0,0,0,0.2); z-index: 10; }
-  .btn { padding: 8px 12px; cursor: pointer; border: none; background: #34495e; color: white; border-radius: 4px; font-weight: bold; transition: 0.2s; }
+  /* ヘッダー */
+  #header { background: var(--primary); color: white; padding: 10px 15px; display: flex; justify-content: space-between; align-items: center; z-index: 10; box-shadow: 0 2px 5px rgba(0,0,0,0.2); flex-wrap: wrap; gap: 10px; }
+  .header-left { display: flex; gap: 10px; align-items: center; }
+  .header-right { display: flex; gap: 10px; align-items: center; }
+  .btn { padding: 6px 12px; cursor: pointer; border: none; border-radius: 4px; font-weight: bold; transition: 0.2s; background: #34495e; color: white; font-size: 13px; }
   .btn:hover { background: #465c71; }
-  .btn.active { background: #e67e22; color: #fff; }
-  #viewBtn { background: #2980b9; font-size: 1.1em; padding: 8px 20px; }
-  #viewBtn:hover { background: #3498db; }
+  .btn.active { background: var(--accent); }
+  .btn-action { background: #27ae60; }
+  .btn-action:hover { background: #2ecc71; }
+  .btn-danger { background: #c0392b; }
+  .btn-danger:hover { background: #e74c3c; }
+  #deviceBadge { background: #f1c40f; color: #333; padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
   
   /* メインレイアウト */
-  #main { display: flex; flex: 1; position: relative; overflow: hidden; }
+  #main { display: flex; flex: 1; overflow: hidden; position: relative; flex-direction: row; }
   
-  /* 2D ワークスペース */
-  #workspace-2d { flex: 1; display: flex; flex-direction: column; position: relative; }
-  #canvas-container { flex: 1; overflow: auto; position: relative; background: #e0e0e0; padding: 20px; }
-  #canvas2d { 
-    background-color: #ffffff; 
-    position: relative; 
-    box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    transform-origin: 0 0;
-  }
-  
-  /* グリッド背景の動的生成用 */
-  .grid-bg {
-    background-image: linear-gradient(#d1d1d1 1px, transparent 1px), linear-gradient(90deg, #d1d1d1 1px, transparent 1px);
-  }
+  /* 左パネル：カテゴリ別メニュー */
+  #left-panel { width: 220px; background: var(--panel); border-right: 1px solid #ccc; display: flex; flex-direction: column; overflow-y: auto; }
+  .menu-category { background: #bdc3c7; padding: 8px 10px; font-size: 13px; font-weight: bold; color: #333; border-bottom: 1px solid #aaa; }
+  .menu-item { padding: 10px; border-bottom: 1px solid #eee; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; }
+  .menu-item:hover { background: #f9f9f9; }
+  .menu-item.selected { background: #ffeaa7; border-left: 4px solid var(--accent); }
+  .item-price { font-size: 11px; color: #777; }
 
-  /* 2Dアイテム */
-  .item-2d { 
-    position: absolute; 
-    transform-origin: center center;
-    display: flex; 
-    align-items: center; 
-    justify-content: center; 
-    font-size: 12px; 
-    color: white; 
-    text-shadow: 1px 1px 0 #000;
-    user-select: none; 
-    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.5), 0 2px 5px rgba(0,0,0,0.3);
-    cursor: grab;
-    transition: box-shadow 0.1s;
-  }
+  /* 中央ワークスペース */
+  #workspace { flex: 1; position: relative; display: flex; flex-direction: column; }
+  #canvas-container { flex: 1; overflow: auto; position: relative; background: #e0e0e0; }
+  #canvas2d { background-color: #ffffff; position: relative; box-shadow: 0 0 10px rgba(0,0,0,0.1); background-image: linear-gradient(#d1d1d1 1px, transparent 1px), linear-gradient(90deg, #d1d1d1 1px, transparent 1px); transform-origin: 0 0; }
+  
+  /* 2D アイテム */
+  .item-2d { position: absolute; display: flex; align-items: center; justify-content: center; font-size: 11px; color: white; text-shadow: 1px 1px 0 #000; user-select: none; border: 1px solid rgba(0,0,0,0.5); cursor: grab; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
   .item-2d:active { cursor: grabbing; }
-  .item-2d.selected { box-shadow: inset 0 0 0 2px #e74c3c, 0 0 10px rgba(231,76,60,0.5); z-index: 100 !important; }
+  .item-2d.selected { box-shadow: 0 0 0 2px #e74c3c, 0 0 10px rgba(231,76,60,0.8); z-index: 100 !important; }
 
-  /* プロパティパネル (右側) */
-  #properties { width: 280px; background: white; border-left: 1px solid #ccc; padding: 20px; display: flex; flex-direction: column; gap: 15px; overflow-y: auto; }
-  .prop-group { display: flex; flex-direction: column; gap: 5px; }
-  .prop-group label { font-size: 13px; color: #555; font-weight: bold; }
-  .prop-group input { padding: 6px; border: 1px solid #ccc; border-radius: 4px; }
-  .panel-title { font-size: 16px; border-bottom: 2px solid #2c3e50; padding-bottom: 5px; margin-bottom: 5px; font-weight: bold; color: #2c3e50; }
+  /* 右パネル：プロパティ＆積算 */
+  #right-panel { width: 280px; background: var(--panel); border-left: 1px solid #ccc; display: flex; flex-direction: column; overflow-y: auto; }
+  .panel-section { padding: 15px; border-bottom: 1px solid #eee; }
+  .panel-title { font-size: 14px; font-weight: bold; color: var(--primary); margin-bottom: 10px; border-bottom: 2px solid var(--primary); padding-bottom: 5px; display: flex; justify-content: space-between; }
+  .prop-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; font-size: 12px; }
+  .prop-row label { flex: 1; color: #555; }
+  .prop-row input { width: 80px; padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; text-align: right; }
+  .prop-row input[type="text"] { width: 140px; text-align: left; }
   
-  /* 3D ワークスペース */
-  #viewer3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #1a1a1a; display: none; z-index: 20; }
-  #backBtn { position: absolute; top: 20px; left: 20px; z-index: 21; background: #e74c3c; font-size: 1.1em; padding: 10px 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-  #backBtn:hover { background: #c0392b; }
+  /* 3D ビューア */
+  #viewer3d { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: #111; display: none; z-index: 20; }
+  #btn-close-3d { position: absolute; top: 20px; left: 20px; z-index: 21; padding: 10px 20px; font-size: 14px; }
+  
+  /* トースト通知 */
+  #toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.8); color: white; padding: 10px 20px; border-radius: 5px; font-size: 13px; display: none; z-index: 9999; }
+
+  /* レスポンシブ対応 (スマホ向け) */
+  @media (max-width: 768px) {
+    #main { flex-direction: column; }
+    #left-panel, #right-panel { width: 100%; height: 200px; border: none; border-top: 1px solid #ccc; }
+    .header-right { width: 100%; justify-content: space-between; margin-top: 5px; }
+  }
 </style>
-<!-- Three.js 関連 -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-<div id="toolbar">
-  <button class="btn" onclick="open3D()" id="viewBtn">3Dプレゼン表示</button>
-  <span style="border-left: 1px solid #555; height: 20px; margin: 0 5px;"></span>
-  <span>ツール:</span>
-  <button class="btn tool-btn active" onclick="setTool('select', this)">選択・移動</button>
-  <button class="btn tool-btn" onclick="setTool('desk', this)">机</button>
-  <button class="btn tool-btn" onclick="setTool('chair', this)">椅子</button>
-  <button class="btn tool-btn" onclick="setTool('cabinet', this)">キャビネ</button>
-  <button class="btn tool-btn" onclick="setTool('conveyor', this)">コンベア</button>
-  <button class="btn tool-btn" onclick="setTool('pipe', this)">配管</button>
-  <button class="btn tool-btn" onclick="setTool('wall', this)">壁</button>
+<div id="header">
+  <div class="header-left">
+    <span style="font-weight: bold;">CAD前 レイアウトシミュレーター</span>
+    <span id="deviceBadge">判定中</span>
+    <button class="btn btn-action" onclick="document.getElementById('fileInput').click()">📁 開く (取込)</button>
+    <input type="file" id="fileInput" accept=".json,.txt" style="display:none" onchange="loadData(event)">
+    <button class="btn btn-action" onclick="saveData()">💾 保存 (出力)</button>
+  </div>
+  <div class="header-right">
+    <button class="btn" onclick="copyItem()" id="btn-copy">コピー(C)</button>
+    <button class="btn" onclick="pasteItem()" id="btn-paste">ペースト(V)</button>
+    <button class="btn" style="background:#2980b9;" onclick="open3D()">▶ 3D表示</button>
+  </div>
 </div>
 
 <div id="main">
-  <!-- 2D エリア -->
-  <div id="workspace-2d">
+  <!-- 左：カテゴリメニュー -->
+  <div id="left-panel">
+    <div class="menu-category">操作</div>
+    <div class="menu-item selected tool-btn" onclick="setTool('select', this)">
+      <span>👆 選択・移動ツール</span>
+    </div>
+    
+    <div class="menu-category">建築・インフラ</div>
+    <div class="menu-item tool-btn" onclick="setTool('wall', this)">
+      <span>仕切り壁</span><span class="item-price">¥30,000</span>
+    </div>
+    <div class="menu-item tool-btn" onclick="setTool('pipe', this)">
+      <span>配管(ダクト)</span><span class="item-price">¥15,000</span>
+    </div>
+    
+    <div class="menu-category">設備・機械</div>
+    <div class="menu-item tool-btn" onclick="setTool('conveyor', this)">
+      <span>ベルトコンベア</span><span class="item-price">¥150,000</span>
+    </div>
+    
+    <div class="menu-category">オフィス家具</div>
+    <div class="menu-item tool-btn" onclick="setTool('desk', this)">
+      <span>作業机</span><span class="item-price">¥25,000</span>
+    </div>
+    <div class="menu-item tool-btn" onclick="setTool('chair', this)">
+      <span>事務椅子</span><span class="item-price">¥12,000</span>
+    </div>
+    <div class="menu-item tool-btn" onclick="setTool('cabinet', this)">
+      <span>キャビネット</span><span class="item-price">¥45,000</span>
+    </div>
+    <div class="menu-item tool-btn" onclick="setTool('hanger', this)">
+      <span>ハンガーラック</span><span class="item-price">¥8,000</span>
+    </div>
+  </div>
+
+  <!-- 中央：2Dワークスペース -->
+  <div id="workspace">
     <div id="canvas-container">
-      <!-- 仮想空間サイズ 10m x 10m (1cm = 1pxとして 1000x1000) -->
-      <div id="canvas2d" class="grid-bg" style="width: 1000px; height: 1000px;" onmousedown="handleCanvasClick(event)"></div>
+      <div id="canvas2d" style="width: 2000px; height: 2000px;" onmousedown="handleCanvasClick(event)"></div>
     </div>
   </div>
 
-  <!-- プロパティパネル -->
-  <div id="properties">
-    <div class="panel-title">環境設定</div>
-    <div class="prop-group">
-      <label>グリッド間隔 (mm)</label>
-      <input type="number" id="gridSize" value="1000" onchange="updateGrid()">
+  <!-- 右：プロパティ＆積算 -->
+  <div id="right-panel">
+    <!-- 積算情報 -->
+    <div class="panel-section" style="background:#f8f9fa;">
+      <div class="panel-title">💰 積算見積 (概算)</div>
+      <div class="prop-row"><span>総アイテム数:</span><span id="summary-count" style="font-weight:bold;">0</span></div>
+      <div class="prop-row"><span>合計金額:</span><span id="summary-price" style="font-weight:bold; color:#c0392b; font-size:16px;">¥0</span></div>
     </div>
-    <div class="prop-group" style="flex-direction: row; align-items: center; gap: 10px;">
-      <input type="checkbox" id="snapToGrid" checked style="width:auto;">
-      <label for="snapToGrid">グリッドにスナップ</label>
+
+    <!-- 環境設定 -->
+    <div class="panel-section">
+      <div class="panel-title">📐 環境・グリッド設定</div>
+      <div class="prop-row">
+        <label>スナップ間隔(mm)</label>
+        <input type="number" id="gridSize" value="500" step="100" onchange="updateGrid()">
+      </div>
     </div>
     
-    <div style="height: 20px;"></div>
-    
-    <div class="panel-title">選択アイテム寸法・調整</div>
-    <div id="item-props" style="display: none; flex-direction: column; gap: 10px;">
-      <div class="prop-group">
-        <label>幅 (W) mm</label>
-        <input type="number" id="propW" onchange="updateSelectedItem()">
+    <!-- 選択プロパティ -->
+    <div class="panel-section" id="item-props" style="display: none;">
+      <div class="panel-title">⚙️ アイテムプロパティ</div>
+      <div class="prop-row">
+        <label>名称</label>
+        <input type="text" id="propName" onchange="applyItemProps()">
       </div>
-      <div class="prop-group">
-        <label>奥行 (D) mm</label>
-        <input type="number" id="propD" onchange="updateSelectedItem()">
+      <div class="prop-row">
+        <label>単価(¥)</label>
+        <input type="number" id="propPrice" onchange="applyItemProps()">
       </div>
-      <div class="prop-group">
-        <label>高さ (H) mm</label>
-        <input type="number" id="propH" onchange="updateSelectedItem()">
-      </div>
-      <div class="prop-group">
-        <label>回転角 (度)</label>
-        <input type="number" id="propRot" value="0" step="15" onchange="updateSelectedItem()">
-      </div>
-      <button class="btn" style="background:#e74c3c; margin-top: 10px;" onclick="deleteSelectedItem()">削除</button>
+      <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+      <div class="prop-row"><label>X座標 (右方向 mm)</label><input type="number" id="propX" onchange="applyItemProps()"></div>
+      <div class="prop-row"><label>Y座標 (下方向 mm)</label><input type="number" id="propY" onchange="applyItemProps()"></div>
+      <div class="prop-row"><label>Z座標 (浮揚高 mm)</label><input type="number" id="propZ" onchange="applyItemProps()"></div>
+      <div class="prop-row"><label>回転角 (度)</label><input type="number" id="propRot" step="15" onchange="applyItemProps()"></div>
+      <hr style="border:0; border-top:1px dashed #ccc; margin:10px 0;">
+      <div class="prop-row"><label>幅 (W mm)</label><input type="number" id="propW" onchange="applyItemProps()"></div>
+      <div class="prop-row"><label>奥行 (D mm)</label><input type="number" id="propD" onchange="applyItemProps()"></div>
+      <div class="prop-row"><label>高さ (H mm)</label><input type="number" id="propH" onchange="applyItemProps()"></div>
+      
+      <button class="btn btn-danger" style="width:100%; margin-top:15px;" onclick="deleteSelectedItem()">このアイテムを削除</button>
     </div>
-    <div id="no-select-msg" style="font-size: 13px; color: #777;">
-      アイテムを選択すると寸法や回転角を調整できます。
+    <div class="panel-section" id="no-select-msg" style="color: #777; font-size:12px;">
+      アイテムを選択すると、座標や寸法をミリ単位で直接指定できます。
     </div>
   </div>
 
-  <!-- 3D エリア -->
+  <!-- 3D ビューア -->
   <div id="viewer3d">
-    <button class="btn" id="backBtn" onclick="close3D()">◀ 2D図面に戻る</button>
+    <button class="btn btn-danger" id="btn-close-3d" onclick="close3D()">◀ 2Dレイアウトに戻る</button>
     <div id="canvas3d" style="width: 100%; height: 100%;"></div>
   </div>
 </div>
 
+<div id="toast">メッセージ</div>
+
 <script>
-// --- 状態管理 ---
-// 表示縮尺: 現実の1mm = 0.1px (例: 1000mm = 100px)
-const SCALE = 0.1; 
+// ==========================================
+// 1. データ定義と初期設定
+// ==========================================
+const SCALE = 0.1; // 1mm = 0.1px
 let items = [];
-let itemIdCounter = 0;
+let itemIdCounter = Date.now();
 let currentTool = 'select';
 let selectedItemId = null;
+let clipboard = null;
 let isDragging = false;
 let dragOffset = { x: 0, y: 0 };
 
-// 初期定義 (単位: mm)
+// ライブラリマスタ (単価、デフォルト寸法設定)
 const itemDefs = {
-  desk: { w: 1200, d: 700, h: 700, color: '#b87333', label: '机' },
-  chair: { w: 500, d: 500, h: 900, color: '#34495e', label: '椅子' },
-  cabinet: { w: 900, d: 450, h: 1800, color: '#95a5a6', label: '棚' },
-  conveyor: { w: 3000, d: 600, h: 800, color: '#27ae60', label: 'コンベア' },
-  pipe: { w: 2000, d: 200, h: 200, color: '#2980b9', label: '配管' },
-  wall: { w: 3000, d: 150, h: 2500, color: '#ecf0f1', label: '壁' }
+  wall:     { label: '壁', w: 3000, d: 100, h: 2500, z: 0, price: 30000, color: '#bdc3c7' },
+  pipe:     { label: '配管', w: 2000, d: 250, h: 250, z: 2500, price: 15000, color: '#3498db' }, // デフォルトで天井付近(Z=2500)
+  conveyor: { label: 'コンベア', w: 3000, d: 600, h: 800, z: 0, price: 150000, color: '#27ae60' },
+  desk:     { label: '机', w: 1200, d: 700, h: 720, z: 0, price: 25000, color: '#d35400' },
+  chair:    { label: '椅子', w: 600, d: 600, h: 900, z: 0, price: 12000, color: '#2c3e50' },
+  cabinet:  { label: 'キャビネ', w: 900, d: 450, h: 1800, z: 0, price: 45000, color: '#7f8c8d' },
+  hanger:   { label: 'ハンガー', w: 1200, d: 450, h: 1500, z: 0, price: 8000, color: '#8e44ad' }
 };
 
-// --- 初期化 ---
 window.onload = () => {
+  detectDevice();
   updateGrid();
+  
+  // キーボードショートカット
+  document.addEventListener('keydown', (e) => {
+    if(e.ctrlKey || e.metaKey) {
+      if(e.key === 'c' || e.key === 'C') { copyItem(); e.preventDefault(); }
+      if(e.key === 'v' || e.key === 'V') { pasteItem(); e.preventDefault(); }
+    }
+    if(e.key === 'Delete' || e.key === 'Backspace') {
+      if(e.target.tagName !== 'INPUT') deleteSelectedItem();
+    }
+  });
 };
 
-function setTool(tool, btn) {
+function detectDevice() {
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const badge = document.getElementById('deviceBadge');
+  if(isMobile) {
+    badge.innerText = '📱 モバイル環境';
+    badge.style.background = '#3498db'; badge.style.color = '#fff';
+  } else {
+    badge.innerText = '💻 PC環境';
+  }
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.innerText = msg;
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 2500);
+}
+
+function updateSummary() {
+  let count = items.length;
+  let total = items.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+  document.getElementById('summary-count').innerText = count;
+  document.getElementById('summary-price').innerText = `¥${total.toLocaleString()}`;
+}
+
+// ==========================================
+// 2. ツール・キャンバス・2D描画
+// ==========================================
+function setTool(tool, el) {
   currentTool = tool;
-  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+  document.querySelectorAll('.menu-item').forEach(m => m.classList.remove('selected'));
+  if(el) el.classList.add('selected');
   if(tool !== 'select') deselectAll();
 }
 
 function updateGrid() {
-  const gridSizeMm = parseInt(document.getElementById('gridSize').value) || 1000;
-  const pxSize = gridSizeMm * SCALE;
-  const canvas = document.getElementById('canvas2d');
-  canvas.style.backgroundSize = `${pxSize}px ${pxSize}px`;
+  const sizeMm = parseInt(document.getElementById('gridSize').value) || 500;
+  const pxSize = sizeMm * SCALE;
+  document.getElementById('canvas2d').style.backgroundSize = `${pxSize}px ${pxSize}px`;
 }
 
-// --- 2D キャンバスインタラクション ---
+function getSnappedPos(valPx) {
+  const sizePx = (parseInt(document.getElementById('gridSize').value) || 500) * SCALE;
+  return Math.round(valPx / sizePx) * sizePx;
+}
+
 function handleCanvasClick(e) {
-  if (currentTool === 'select' || e.target !== document.getElementById('canvas2d')) return;
+  if (currentTool === 'select' || e.target.id !== 'canvas2d') return;
   
-  // 新規配置
   const rect = document.getElementById('canvas2d').getBoundingClientRect();
   let x = e.clientX - rect.left;
   let y = e.clientY - rect.top;
-  
-  // スナップ処理
-  if(document.getElementById('snapToGrid').checked) {
-    const gridPx = (parseInt(document.getElementById('gridSize').value) || 1000) * SCALE;
-    x = Math.round(x / gridPx) * gridPx;
-    y = Math.round(y / gridPx) * gridPx;
-  }
+  x = getSnappedPos(x);
+  y = getSnappedPos(y);
 
   const def = itemDefs[currentTool];
   const newItem = {
-    id: itemIdCounter++,
+    id: 'item_' + (itemIdCounter++),
     type: currentTool,
-    x: x, 
-    y: y,
+    label: def.label,
+    price: def.price,
+    x: Math.round(x / SCALE), y: Math.round(y / SCALE), z: def.z, // 実寸(mm)保存
     w: def.w, d: def.d, h: def.h,
-    rot: 0,
-    color: def.color,
-    label: def.label
+    rot: 0, color: def.color
   };
   
   items.push(newItem);
   render2DItem(newItem);
   selectItem(newItem.id);
-  
-  // 配置後は自動で選択モードに戻す（連続配置を防ぎ操作性を上げる）
-  setTool('select', document.querySelector('.tool-btn'));
+  updateSummary();
+  setTool('select', document.querySelector('.menu-item')); // 配置後選択モードへ
 }
 
 function render2DItem(item) {
-  let div = document.getElementById(`item-${item.id}`);
+  let div = document.getElementById(item.id);
   if (!div) {
     div = document.createElement('div');
-    div.id = `item-${item.id}`;
+    div.id = item.id;
     div.className = 'item-2d';
-    div.innerText = item.label;
-    
-    // ドラッグイベント登録
     div.onmousedown = (e) => startDrag(e, item.id);
     document.getElementById('canvas2d').appendChild(div);
   }
@@ -229,27 +310,27 @@ function render2DItem(item) {
   const wPx = item.w * SCALE;
   const dPx = item.d * SCALE;
   
+  div.innerText = item.label;
   div.style.width = wPx + 'px';
   div.style.height = dPx + 'px';
   div.style.backgroundColor = item.color;
-  // 中心基準で配置し、回転を適用
-  div.style.left = (item.x - wPx/2) + 'px';
-  div.style.top = (item.y - dPx/2) + 'px';
+  // 中心座標基準
+  div.style.left = (item.x * SCALE - wPx/2) + 'px';
+  div.style.top = (item.y * SCALE - dPx/2) + 'px';
   div.style.transform = `rotate(${item.rot}deg)`;
 }
 
-// --- ドラッグ＆ドロップ ---
+// --- ドラッグ操作 ---
 function startDrag(e, id) {
   if(currentTool !== 'select') return;
-  e.stopPropagation(); // キャンバスクリック発火を防ぐ
-  
+  e.stopPropagation();
   selectItem(id);
+  
   const item = items.find(i => i.id === id);
   const rect = document.getElementById('canvas2d').getBoundingClientRect();
-  
   isDragging = true;
-  dragOffset.x = (e.clientX - rect.left) - item.x;
-  dragOffset.y = (e.clientY - rect.top) - item.y;
+  dragOffset.x = (e.clientX - rect.left) - (item.x * SCALE);
+  dragOffset.y = (e.clientY - rect.top) - (item.y * SCALE);
   
   document.onmousemove = drag;
   document.onmouseup = endDrag;
@@ -258,43 +339,30 @@ function startDrag(e, id) {
 function drag(e) {
   if (!isDragging) return;
   const rect = document.getElementById('canvas2d').getBoundingClientRect();
-  let newX = (e.clientX - rect.left) - dragOffset.x;
-  let newY = (e.clientY - rect.top) - dragOffset.y;
+  let newXPx = (e.clientX - rect.left) - dragOffset.x;
+  let newYPx = (e.clientY - rect.top) - dragOffset.y;
   
-  if(document.getElementById('snapToGrid').checked) {
-    const gridPx = (parseInt(document.getElementById('gridSize').value) || 1000) * SCALE;
-    newX = Math.round(newX / gridPx) * gridPx;
-    newY = Math.round(newY / gridPx) * gridPx;
-  }
+  newXPx = getSnappedPos(newXPx);
+  newYPx = getSnappedPos(newYPx);
   
   const item = items.find(i => i.id === selectedItemId);
-  item.x = newX;
-  item.y = newY;
+  item.x = Math.round(newXPx / SCALE);
+  item.y = Math.round(newYPx / SCALE);
+  
   render2DItem(item);
+  updatePropPanel();
 }
+function endDrag() { isDragging = false; document.onmousemove = null; document.onmouseup = null; }
 
-function endDrag() {
-  isDragging = false;
-  document.onmousemove = null;
-  document.onmouseup = null;
-}
-
-// --- 選択・プロパティ変更 ---
+// ==========================================
+// 3. プロパティ操作・コピペ・保存
+// ==========================================
 function selectItem(id) {
   deselectAll();
   selectedItemId = id;
-  const div = document.getElementById(`item-${id}`);
+  const div = document.getElementById(id);
   if(div) div.classList.add('selected');
-  
-  const item = items.find(i => i.id === id);
-  if(item) {
-    document.getElementById('item-props').style.display = 'flex';
-    document.getElementById('no-select-msg').style.display = 'none';
-    document.getElementById('propW').value = item.w;
-    document.getElementById('propD').value = item.d;
-    document.getElementById('propH').value = item.h;
-    document.getElementById('propRot').value = item.rot;
-  }
+  updatePropPanel();
 }
 
 function deselectAll() {
@@ -304,171 +372,272 @@ function deselectAll() {
   document.getElementById('no-select-msg').style.display = 'block';
 }
 
-function updateSelectedItem() {
-  if (selectedItemId === null) return;
+function updatePropPanel() {
+  if(!selectedItemId) return;
   const item = items.find(i => i.id === selectedItemId);
-  item.w = parseFloat(document.getElementById('propW').value);
-  item.d = parseFloat(document.getElementById('propD').value);
-  item.h = parseFloat(document.getElementById('propH').value);
-  item.rot = parseFloat(document.getElementById('propRot').value);
+  document.getElementById('item-props').style.display = 'block';
+  document.getElementById('no-select-msg').style.display = 'none';
+  
+  document.getElementById('propName').value = item.label;
+  document.getElementById('propPrice').value = item.price;
+  document.getElementById('propX').value = item.x;
+  document.getElementById('propY').value = item.y;
+  document.getElementById('propZ').value = item.z;
+  document.getElementById('propRot').value = item.rot;
+  document.getElementById('propW').value = item.w;
+  document.getElementById('propD').value = item.d;
+  document.getElementById('propH').value = item.h;
+}
+
+function applyItemProps() {
+  if(!selectedItemId) return;
+  const item = items.find(i => i.id === selectedItemId);
+  
+  item.label = document.getElementById('propName').value;
+  item.price = Number(document.getElementById('propPrice').value);
+  item.x = Number(document.getElementById('propX').value);
+  item.y = Number(document.getElementById('propY').value);
+  item.z = Number(document.getElementById('propZ').value);
+  item.rot = Number(document.getElementById('propRot').value);
+  item.w = Number(document.getElementById('propW').value);
+  item.d = Number(document.getElementById('propD').value);
+  item.h = Number(document.getElementById('propH').value);
+  
   render2DItem(item);
+  updateSummary();
 }
 
 function deleteSelectedItem() {
-  if (selectedItemId === null) return;
+  if (!selectedItemId) return;
   items = items.filter(i => i.id !== selectedItemId);
-  const div = document.getElementById(`item-${selectedItemId}`);
-  if(div) div.remove();
+  document.getElementById(selectedItemId).remove();
   deselectAll();
+  updateSummary();
+  showToast("アイテムを削除しました");
 }
 
-// --- 3D モード (高機能版) ---
+function copyItem() {
+  if(!selectedItemId) return;
+  const item = items.find(i => i.id === selectedItemId);
+  clipboard = JSON.parse(JSON.stringify(item));
+  showToast("コピーしました");
+}
+
+function pasteItem() {
+  if(!clipboard) { showToast("クリップボードが空です"); return; }
+  let newItem = JSON.parse(JSON.stringify(clipboard));
+  newItem.id = 'item_' + (itemIdCounter++);
+  // 少しずらして配置
+  newItem.x += 200; 
+  newItem.y += 200;
+  items.push(newItem);
+  render2DItem(newItem);
+  selectItem(newItem.id);
+  updateSummary();
+  showToast("ペーストしました");
+}
+
+// データ保存 (JSONテキスト)
+function saveData() {
+  const dataStr = JSON.stringify(items, null, 2);
+  const blob = new Blob([dataStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const d = new Date();
+  a.download = `layout_data_${d.getFullYear()}${d.getMonth()+1}${d.getDate()}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast("データを保存しました");
+}
+
+// データ取込
+function loadData(event) {
+  const file = event.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if(Array.isArray(parsed)) {
+        // キャンバスクリア
+        items = [];
+        document.getElementById('canvas2d').innerHTML = '';
+        parsed.forEach(p => {
+          items.push(p);
+          render2DItem(p);
+        });
+        updateSummary();
+        deselectAll();
+        showToast("データを読み込みました");
+      }
+    } catch(err) {
+      alert("ファイルの読み込みに失敗しました。形式が正しくありません。");
+    }
+  };
+  reader.readAsText(file);
+  event.target.value = ''; // リセット
+}
+
+// ==========================================
+// 4. 3D モード (プロシージャル・パーツ生成)
+// ==========================================
 let scene, camera, renderer, controls, animationId;
 
-function open3D() {
-  document.getElementById('viewer3d').style.display = 'block';
-  init3D();
-}
-
-function close3D() {
-  document.getElementById('viewer3d').style.display = 'none';
-  cancelAnimationFrame(animationId);
-}
+function open3D() { document.getElementById('viewer3d').style.display = 'block'; init3D(); }
+function close3D() { document.getElementById('viewer3d').style.display = 'none'; cancelAnimationFrame(animationId); }
 
 function init3D() {
   const container = document.getElementById('canvas3d');
   container.innerHTML = '';
-  
   scene = new THREE.Scene();
-  scene.background = new THREE.Color(0x222222);
+  scene.background = new THREE.Color(0x1a1a1a);
   
-  const width = container.clientWidth;
-  const height = container.clientHeight;
+  camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 10, 50000);
+  camera.position.set(0, 4000, 5000);
   
-  camera = new THREE.PerspectiveCamera(50, width / height, 100, 20000);
-  camera.position.set(0, 3000, 4000);
-  
-  // シャドウマップ有効化で質感を向上
   renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(width, height);
+  renderer.setSize(container.clientWidth, container.clientHeight);
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   container.appendChild(renderer.domElement);
   
   controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.enableDamping = true;
+  controls.target.set(1000, 0, 1000); // 描画中心
   
-  // ライティング (環境光 + 影を落とす平行光源)
-  scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+  // ライト
+  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
   const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-  dirLight.position.set(2000, 4000, 2000);
+  dirLight.position.set(3000, 5000, 2000);
   dirLight.castShadow = true;
-  dirLight.shadow.mapSize.width = 2048;
-  dirLight.shadow.mapSize.height = 2048;
-  dirLight.shadow.camera.left = -5000;
-  dirLight.shadow.camera.right = 5000;
-  dirLight.shadow.camera.top = 5000;
-  dirLight.shadow.camera.bottom = -5000;
+  dirLight.shadow.mapSize.width = 2048; dirLight.shadow.mapSize.height = 2048;
+  dirLight.shadow.camera.left = -5000; dirLight.shadow.camera.right = 5000;
+  dirLight.shadow.camera.top = 5000; dirLight.shadow.camera.bottom = -5000;
   scene.add(dirLight);
 
   // 床
-  const floorGeo = new THREE.PlaneGeometry(10000, 10000);
-  const floorMat = new THREE.MeshStandardMaterial({ color: 0x555555, roughness: 0.8 });
+  const floorGeo = new THREE.PlaneGeometry(20000, 20000);
+  const floorMat = new THREE.MeshStandardMaterial({ color: 0x444444, roughness: 0.9 });
   const floor = new THREE.Mesh(floorGeo, floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
   scene.add(floor);
   
-  // グリッド
-  const grid = new THREE.GridHelper(10000, 10, 0x000000, 0x444444);
+  const grid = new THREE.GridHelper(20000, 40, 0x000000, 0x333333);
   grid.position.y = 1;
   scene.add(grid);
   
-  // アイテムの立体化 (プロシージャル生成で形状と質感を再現)
+  // パーツ構築
   items.forEach(item => {
-    // 2Dキャンバス中心(500,500)を3D原点(0,0,0)にマッピングし、実寸(mm)にスケール
-    const posX = (item.x / SCALE) - 5000;
-    const posZ = (item.y / SCALE) - 5000;
-    
-    // アイテムごとのグループを作成
     const group = new THREE.Group();
-    group.position.set(posX, 0, posZ);
-    // 2Dの回転角(時計回り)をThree.jsのY軸回転(反時計回り)に変換
+    // 2D原点(左上)を3D空間の原点にあわせる
+    group.position.set(item.x, item.z, item.y);
     group.rotation.y = -item.rot * (Math.PI / 180);
-    
-    // ベースとなるマテリアル (StandardMaterialで光の反射を計算)
-    const baseMat = new THREE.MeshStandardMaterial({ 
-      color: item.color, 
-      roughness: 0.6, 
-      metalness: 0.1 
-    });
-
-    if (item.type === 'desk') {
-      // 天板
-      const topGeo = new THREE.BoxGeometry(item.w, 30, item.d);
-      const top = new THREE.Mesh(topGeo, baseMat);
-      top.position.y = item.h - 15;
-      top.castShadow = true;
-      group.add(top);
-      // 脚4本
-      const legGeo = new THREE.CylinderGeometry(20, 20, item.h - 30);
-      const legMat = new THREE.MeshStandardMaterial({ color: 0xcccccc, metalness: 0.8, roughness: 0.2 });
-      const positions = [
-        [-item.w/2 + 50, item.d/2 - 50], [item.w/2 - 50, item.d/2 - 50],
-        [-item.w/2 + 50, -item.d/2 + 50], [item.w/2 - 50, -item.d/2 + 50]
-      ];
-      positions.forEach(pos => {
-        const leg = new THREE.Mesh(legGeo, legMat);
-        leg.position.set(pos[0], (item.h-30)/2, pos[1]);
-        leg.castShadow = true;
-        group.add(leg);
-      });
-    } 
-    else if (item.type === 'conveyor') {
-      // 脚部ベース
-      const baseGeo = new THREE.BoxGeometry(item.w, item.h - 100, item.d - 100);
-      const baseMesh = new THREE.Mesh(baseGeo, baseMat);
-      baseMesh.position.y = (item.h - 100) / 2;
-      baseMesh.castShadow = true;
-      group.add(baseMesh);
-      // ベルト部分 (黒いゴムの質感)
-      const beltGeo = new THREE.BoxGeometry(item.w, 100, item.d);
-      const beltMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.9 });
-      const belt = new THREE.Mesh(beltGeo, beltMat);
-      belt.position.y = item.h - 50;
-      belt.castShadow = true;
-      group.add(belt);
-    }
-    else if (item.type === 'pipe') {
-      // 円柱配管 (金属光沢を持たせる)
-      const pipeGeo = new THREE.CylinderGeometry(item.d/2, item.d/2, item.w, 32);
-      const pipeMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.7, roughness: 0.3 });
-      const pipe = new THREE.Mesh(pipeGeo, pipeMat);
-      pipe.rotation.z = Math.PI / 2;
-      pipe.position.y = item.h / 2; // 地上高
-      pipe.castShadow = true;
-      group.add(pipe);
-    }
-    else {
-      // その他 (壁、キャビネット等)はシンプルな直方体
-      const geo = new THREE.BoxGeometry(item.w, item.h, item.d);
-      const mesh = new THREE.Mesh(geo, baseMat);
-      mesh.position.y = item.h / 2;
-      mesh.castShadow = true;
-      mesh.receiveShadow = true;
-      
-      // エッジを強調して見やすくする
-      const edges = new THREE.EdgesGeometry(geo);
-      const line = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: 0x000000, linewidth: 2 }));
-      mesh.add(line);
-      
-      group.add(mesh);
-    }
-    
+    buildProceduralMesh(item, group);
     scene.add(group);
   });
 
   animate();
+}
+
+// ★単なる箱ではない、パーツ単位の3D構造生成
+function buildProceduralMesh(item, group) {
+  const baseMat = new THREE.MeshStandardMaterial({ color: item.color, roughness: 0.6, metalness: 0.1 });
+  const darkMat = new THREE.MeshStandardMaterial({ color: 0x222222, roughness: 0.8 });
+  const metalMat = new THREE.MeshStandardMaterial({ color: 0xaaaaaa, metalness: 0.8, roughness: 0.2 });
+
+  // 補助関数: パーツ作成
+  const addBox = (w, h, d, y, mat) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+    mesh.position.y = y; mesh.castShadow = true; mesh.receiveShadow = true; group.add(mesh);
+  };
+
+  switch(item.type) {
+    case 'desk':
+      // 天板
+      addBox(item.w, 30, item.d, item.h - 15, baseMat);
+      // 脚4本
+      const legR = 20;
+      const legPositions = [
+        [-item.w/2 + 50, item.d/2 - 50], [item.w/2 - 50, item.d/2 - 50],
+        [-item.w/2 + 50, -item.d/2 + 50], [item.w/2 - 50, -item.d/2 + 50]
+      ];
+      legPositions.forEach(p => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(legR, legR, item.h - 30), metalMat);
+        leg.position.set(p[0], (item.h - 30)/2, p[1]);
+        leg.castShadow = true; group.add(leg);
+      });
+      break;
+
+    case 'chair':
+      // 座面 (高さの半分位置)
+      const seatH = item.h * 0.5;
+      addBox(item.w, 40, item.d, seatH, baseMat);
+      // 座面クッション
+      addBox(item.w - 10, 20, item.d - 10, seatH + 30, darkMat);
+      // 背もたれ
+      const backH = item.h - seatH;
+      const back = new THREE.Mesh(new THREE.BoxGeometry(item.w, backH, 30), baseMat);
+      back.position.set(0, seatH + backH/2, -item.d/2 + 15);
+      back.castShadow = true; group.add(back);
+      // 支柱(1本脚とキャスターベース簡略化)
+      const centerLeg = new THREE.Mesh(new THREE.CylinderGeometry(30, 30, seatH - 20), metalMat);
+      centerLeg.position.y = (seatH - 20)/2; centerLeg.castShadow=true; group.add(centerLeg);
+      break;
+      
+    case 'cabinet':
+      // 外枠
+      addBox(item.w, item.h, item.d, item.h/2, baseMat);
+      // 引き出し・扉の表現 (手前に少し浮かせた別パネル)
+      const doorMat = new THREE.MeshStandardMaterial({ color: 0xe0e0e0, roughness: 0.4 });
+      const door = new THREE.Mesh(new THREE.BoxGeometry(item.w - 10, item.h - 10, 5), doorMat);
+      door.position.set(0, item.h/2, item.d/2 + 2); group.add(door);
+      // 取っ手
+      const handle = new THREE.Mesh(new THREE.BoxGeometry(10, 100, 10), metalMat);
+      handle.position.set(-item.w/2 + 40, item.h/2, item.d/2 + 5); group.add(handle);
+      break;
+
+    case 'conveyor':
+      // 脚部ベース
+      addBox(item.w, item.h - 150, item.d - 100, (item.h - 150)/2, baseMat);
+      // コンベアフレーム
+      addBox(item.w, 100, item.d, item.h - 100, metalMat);
+      // 黒いベルト部分
+      addBox(item.w, 30, item.d - 40, item.h - 35, darkMat);
+      break;
+
+    case 'pipe':
+      // 円柱状の配管
+      const pipeGeo = new THREE.CylinderGeometry(item.d/2, item.d/2, item.w, 16);
+      const pipeMat = new THREE.MeshStandardMaterial({ color: item.color, metalness: 0.5, roughness: 0.5 });
+      const pipe = new THREE.Mesh(pipeGeo, pipeMat);
+      pipe.rotation.z = Math.PI / 2; 
+      pipe.position.y = item.h / 2;
+      pipe.castShadow = true; pipe.receiveShadow = true;
+      group.add(pipe);
+      break;
+
+    case 'hanger':
+      // ハンガーラック (枠組み)
+      const barR = 15;
+      // 左右の縦パイプ
+      const vBar1 = new THREE.Mesh(new THREE.CylinderGeometry(barR, barR, item.h), metalMat);
+      vBar1.position.set(-item.w/2 + barR, item.h/2, 0); group.add(vBar1);
+      const vBar2 = new THREE.Mesh(new THREE.CylinderGeometry(barR, barR, item.h), metalMat);
+      vBar2.position.set(item.w/2 - barR, item.h/2, 0); group.add(vBar2);
+      // 上部横パイプ
+      const hBar = new THREE.Mesh(new THREE.CylinderGeometry(barR, barR, item.w), metalMat);
+      hBar.rotation.z = Math.PI/2; hBar.position.y = item.h - barR; group.add(hBar);
+      // 下部ベース部
+      addBox(item.w, 40, item.d, 20, baseMat);
+      break;
+
+    case 'wall':
+    default:
+      addBox(item.w, item.h, item.d, item.h/2, baseMat);
+      break;
+  }
 }
 
 function animate() {
@@ -478,9 +647,8 @@ function animate() {
   renderer.render(scene, camera);
 }
 
-// リサイズ対応
 window.addEventListener('resize', () => {
-  if(camera && renderer) {
+  if(camera && renderer && document.getElementById('viewer3d').style.display !== 'none') {
     const container = document.getElementById('canvas3d');
     camera.aspect = container.clientWidth / container.clientHeight;
     camera.updateProjectionMatrix();
